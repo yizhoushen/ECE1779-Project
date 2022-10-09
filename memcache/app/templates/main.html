@@ -1,24 +1,16 @@
 <!DOCTYPE html>
 <head>
-    <title>Very simple memcache</title>
+    <title>Main Page</title>
 </head>
 <html>
     <body>
-
-        <form action="{{ url_for('get')}}" method="post">
-            <label>key:</label>
-            <input type="text" name="key" />
-            <input type="submit" value="get" />
-        </form>
-
-        <form action="{{ url_for('put')}}" method="post">
-            <label>key:</label>
-            <input type="text" name="key" />
-            <label>value:</label>
-            <input type="text" name="value" />
-            <input type="submit" value="put" />
-        </form>
-
-
+        <h1>Home</h1>
+        <ul>
+            <li><a href="{{url_for('upload')}}">upload image</a></li>
+            <li><a href="{{url_for('show_image')}}">show image</a></li>
+            <li><a href="{{url_for('all_keys')}}">show all keys</a></li>
+            <li><a href="{{url_for('config_mem_cache')}}">configure mem-cache</a></li>
+            <li><a href="{{url_for('statistics')}}">mem-cache statistics</a></li>
+        </ul>
     <body>    
 </html>
