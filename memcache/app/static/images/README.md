@@ -1,1 +1,0 @@
-This is just a placeholder file that prevent the empty folder from being ignored by git
