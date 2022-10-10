@@ -1,10 +1,10 @@
 
 from flask import render_template, url_for, request, g
-from app import webapp, memcache
+from WebFrontend import webapp, memcache
 from flask import json
 
 import mysql.connector
-from app.config import db_config
+from WebFrontend.config import db_config
 import sys
 
 def connect_to_database():
