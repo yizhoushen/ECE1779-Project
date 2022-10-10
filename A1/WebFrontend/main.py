@@ -109,6 +109,7 @@ def image_upload():
     cursor.execute(query_overwrite, (new_key, dbimage_path))
     cnx.commit()
 
+    # Remember to change the hardcoded path!!!!!
     new_path = os.path.join("C:/Users/Harry/MyDocs/UofT/ECE1779/ECE1779-Project/A1/WebFrontend", dbimage_path)
     save_path = new_path.replace("\\", "/")
     new_image.save(save_path)
