@@ -206,6 +206,7 @@ def config_mem_cache():
         
         return "Success"
     elif 'cache_clear' in request.form and 'cache_configure' not in request.form:
+        ### todo: Send some JSON request to memcache instance
         return "Cache Cleared"
     else:
         return "Invalid! Please choose cache configure or cache clear"
@@ -213,8 +214,15 @@ def config_mem_cache():
 
 @webapp.route('/statistics', methods=['GET'])
 def statistics():
-    # implement /statistics
-    return render_template("main.html")
+    cnx = get_db()
+
+    cursor = cnx.cursor()
+
+    query = "SELECT * FROM statistics"
+
+    cursor.execute(query)
+
+    return render_template("statistics.html", title="Memory Cache Statistics", cursor=cursor)
 
 @webapp.route('/testpath', methods=['GET'])
 def testpath():
