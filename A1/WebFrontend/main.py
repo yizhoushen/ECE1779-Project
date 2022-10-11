@@ -10,6 +10,8 @@ import sys
 import tempfile
 import os
 
+# os.chdir(os.path.abspath("./A1/WebFrontend"))
+
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
                                    password=db_config['password'],
@@ -109,8 +111,8 @@ def image_upload():
     cursor.execute(query_overwrite, (new_key, dbimage_path))
     cnx.commit()
 
-    # Remember to change the hardcoded path!!!!!
-    new_path = os.path.join("C:/Users/Harry/MyDocs/UofT/ECE1779/ECE1779-Project/A1/WebFrontend", dbimage_path)
+    # Assume the current directory is .../ECE1779-Project
+    new_path = os.path.join(os.path.abspath("./A1/WebFrontend"), dbimage_path)
     save_path = new_path.replace("\\", "/")
     new_image.save(save_path)
     return "Success"
@@ -200,12 +202,45 @@ def all_keys():
     return render_template("keylist.html", title="ImageID List", cursor=cursor)
 
 
-@webapp.route('/config_mem_cache', methods=['GET'])
+@webapp.route('/config_form', methods=['GET'])
+def config_form():
+    return render_template("config_form.html", title="Configure Memory Cache")
+
+@webapp.route('/config_mem_cache', methods=['POST'])
 def config_mem_cache():
-    # implement /config_mem_cache
-    return render_template("main.html")
+    if 'memcache_size' not in request.form:
+        return "Missing MemCache size"
+    
+    if 'memcache_policy' not in request.form:
+        return "Missing MemCache Replacement Policy"
+    
+    memcache_szie = request.form.get('memcache_size')
+    memcache_policy = request.form.get('memcache_policy')
+
+    if memcache_szie == '':
+        return 'MemCache size is empty'
+    if memcache_policy == '':
+        return 'MemCache Replacement Policy is empty'
+    
+    cnx = get_db()
+    cursor = cnx.cursor()
+
+    query = ''' UPDATE configuration
+                SET Capacity = %s,
+                    ReplacePolicy = %s
+                WHERE id = 1'''
+
+    cursor.execute(query, (memcache_szie, memcache_policy))
+    cnx.commit()
+    
+    return "Success"
 
 @webapp.route('/statistics', methods=['GET'])
 def statistics():
     # implement /statistics
     return render_template("main.html")
+
+@webapp.route('/testpath', methods=['GET'])
+def testpath():
+    temp_path = os.path.abspath("./temp_path")
+    return temp_path
