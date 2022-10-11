@@ -30,48 +30,10 @@ def teardown_db(exception):
     if db is not None:
         db.close()
 
-# @webapp.route('/')
 @webapp.route('/',methods=['GET'])
 @webapp.route('/main',methods=['GET'])
 def main():
     return render_template("main.html")
-
-# @webapp.route('/get',methods=['POST'])
-# def get():
-#     key = request.form.get('key')
-
-#     if key in memcache:
-#         value = memcache[key]
-#         response = webapp.response_class(
-#             response=json.dumps(value),
-#             status=200,
-#             mimetype='application/json'
-#         )
-#     else:
-#         response = webapp.response_class(
-#             response=json.dumps("Unknown key"),
-#             status=400,
-#             mimetype='application/json'
-#         )
-
-#     return response
-
-# @webapp.route('/put',methods=['POST'])
-# def put():
-#     key = request.form.get('key')
-#     value = request.form.get('value')
-#     memcache[key] = value
-
-#     response = webapp.response_class(
-#         response=json.dumps("OK"),
-#         status=200,
-#         mimetype='application/json'
-#     )
-
-#     return response
-
-########################################################
-
 
 @webapp.route('/upload_form', methods=['GET'])
 def upload_form():
@@ -98,6 +60,12 @@ def image_upload():
     
     s = new_image.filename.split(".")
     file_extension = s[len(s)-1]
+    
+    # for some reason only the images in '.../ECE1779-Project/A1/WebFrontend/static' folder can be rendered
+    # images from other folders got 'GET <other_directory> HTTP/1.1 404' error
+    # possible solution: need to manually define static file directory
+    # https://stackoverflow.com/questions/67698211/getting-get-static-css-base-css-http-1-1-404-1795-error-for-static-files
+    
     temp_path = os.path.join("./static/images", "{}.{}".format(new_key, file_extension))
     dbimage_path = temp_path.replace("\\", "/")
 
@@ -183,7 +151,7 @@ def image_display():
     if row == None:
         return "No such image"
 
-    # image_path = os.path.join('static/images', row[1])
+    # image_path = os.path.join('static/images', row[0])
     image_path = row[0]
 
     return render_template("image_display.html", title="Image Display", image_path=image_path)
@@ -208,32 +176,40 @@ def config_form():
 
 @webapp.route('/config_mem_cache', methods=['POST'])
 def config_mem_cache():
-    if 'memcache_size' not in request.form:
-        return "Missing MemCache size"
-    
-    if 'memcache_policy' not in request.form:
-        return "Missing MemCache Replacement Policy"
-    
-    memcache_szie = request.form.get('memcache_size')
-    memcache_policy = request.form.get('memcache_policy')
+    if 'cache_clear' not in request.form and 'cache_configure' in request.form:
+        if 'memcache_size' not in request.form:
+            return "Missing MemCache size"
+        
+        if 'memcache_policy' not in request.form:
+            return "Missing MemCache Replacement Policy"
+        
+        memcache_szie = request.form.get('memcache_size')
+        memcache_policy = request.form.get('memcache_policy')
 
-    if memcache_szie == '':
-        return 'MemCache size is empty'
-    if memcache_policy == '':
-        return 'MemCache Replacement Policy is empty'
-    
-    cnx = get_db()
-    cursor = cnx.cursor()
+        if memcache_szie == '':
+            return 'MemCache size is empty'
+        if memcache_policy == '':
+            return 'MemCache Replacement Policy is empty'
+        if memcache_policy != 0 or memcache_policy != 1:
+            return 'Invalid Replacement Policy'
 
-    query = ''' UPDATE configuration
-                SET Capacity = %s,
-                    ReplacePolicy = %s
-                WHERE id = 1'''
+        cnx = get_db()
+        cursor = cnx.cursor()
 
-    cursor.execute(query, (memcache_szie, memcache_policy))
-    cnx.commit()
-    
-    return "Success"
+        query = ''' UPDATE configuration
+                    SET Capacity = %s,
+                        ReplacePolicy = %s
+                    WHERE id = 1'''
+
+        cursor.execute(query, (memcache_szie, memcache_policy))
+        cnx.commit()
+        
+        return "Success"
+    elif 'cache_clear' in request.form and 'cache_configure' not in request.form:
+        return "Cache Cleared"
+    else:
+        return "Invalid! Please choose cache configure or cache clear"
+
 
 @webapp.route('/statistics', methods=['GET'])
 def statistics():

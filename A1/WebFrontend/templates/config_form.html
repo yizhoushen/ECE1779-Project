@@ -6,6 +6,12 @@
         Memory Cache Size (KB):  <input type="text", name="memcache_size"><br />
         Cache Replacement Policy (0 for Random, 1 for LRU): <input type="text" name="memcache_policy"><br />
 
-        <input type="submit" value="Send">
+        <input type="submit" name="cache_configure"  value="Configure">
     </form>
+
+    <form action="{{url_for('config_mem_cache')}}"  method="post">
+        Or do you want to clear memory cache? <br/>
+        <input type="submit" name="cache_clear" value="Clear">
+    </form>
+
 {% endblock %}
