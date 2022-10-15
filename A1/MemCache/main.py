@@ -1,23 +1,29 @@
 from collections import OrderedDict
 from sys import getsizeof
 import random
-import mysql.connector
 
-DROP_APPROACH = 1
+# for database
+import mysql.connector
+# from flask import render_template, url_for, request, g
+# from WebFrontend import webapp, memcache
+from config import db_config
+DROP_APPROACH = 0
 
 # database prepare
-# def connect_to_database():
-#     return mysql.connector.connect(user=db_config['user'],
-#                                    password=db_config['password'],
-#                                    host=db_config['host'],
-#                                    database=db_config['database'])
-#
-# def get_db():
-#     db = getattr(g, '_database', None)
-#     if db is None:
-#         db = g._database = connect_to_database()
-#     return db
-#
+def connect_to_database():
+    return mysql.connector.connect(user=db_config['user'],
+                                   password=db_config['password'],
+                                   host=db_config['host'],
+                                   database=db_config['database'],
+                                   auth_plugin='mysql_native_password')
+
+def get_db():
+    # db = getattr(g, '_database', None)
+    # if db is None:
+    #     db = g._database = connect_to_database()
+    db = connect_to_database()
+    return db
+
 # @webapp.teardown_appcontext
 # def teardown_db(exception):
 #     db = getattr(g, '_database', None)
@@ -28,9 +34,20 @@ DROP_APPROACH = 1
 # MemCache class starts here
 class PicMemCache(object):
 
-    def __init__(self, memCacheCapacity) -> None:
+    def __init__(self, memCacheCapacity=None) -> None:
         # 用户设定的MemCache大小，需从数据库读取
-        self.memCacheCapacity = memCacheCapacity
+
+        # 单独写一个函数，用来和db交互 or 直接写在功能函数中？
+        cnx = get_db()
+        cursor = cnx.cursor()
+
+        query = "SELECT Capacity FROM configuration WHERE id = 1"
+
+        cursor.execute(query)
+        # row = cursor.fetchone()
+
+        # self.memCacheCapacity = memCacheCapacity
+        self.memCacheCapacity = cursor.fetchone()[0]
         # 当前MemCache容量 = 占用情况
         self.currentMemCache = 0
         self.MC = OrderedDict()
@@ -76,7 +93,7 @@ class PicMemCache(object):
 
     def get_pic(self, keyID):
         # 当用户看图时，调用此函数
-        # 仅有此处才可能写入memCache
+        # 唯一写入memCache的情况
         if self.MC[keyID] != -1:
             # 调用的图片就在MemCache
             self.MC.move_to_end(key=keyID, last=True)
@@ -94,6 +111,7 @@ class PicMemCache(object):
         # if self.MC == None: 这里需要判断空嘛
         self.currentMemCache = 0
 
+
     def refreshConfiguration(self, newMemCacheCapacity):
         if newMemCacheCapacity < 0:
             # 最好在前端验证，不能在数据库中存非正常值
@@ -109,6 +127,7 @@ class PicMemCache(object):
         if self.MC[keyID] != -1:
             self.drop_specific_pic(keyID)
 
+
     def get_info(self):
         # for test
         print("currentMem: ",self.currentMemCache)
@@ -116,20 +135,13 @@ class PicMemCache(object):
         # print(self.MC)
 
 
-    def write2db(self):
-        cnx = get_db()
-        cursor = cnx.cursor()
+    # def write2db(self):
 
-        query = ''' SELECT ImagePath FROM imagelist
-                        WHERE ImageID = %s'''
-
-        cursor.execute(query, (image_key,))
-        row = cursor.fetchone()
 
 
 
 # following for test
-memory1 = PicMemCache(2000)
+memory1 = PicMemCache()
 for i in range(60):
     memory1.put_pic(i,"picture1")
     memory1.get_info()
