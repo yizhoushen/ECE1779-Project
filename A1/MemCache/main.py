@@ -1,4 +1,3 @@
-
 from collections import OrderedDict
 from sys import getsizeof
 import random
@@ -46,8 +45,8 @@ class PicMemCache(object):
         # Random Replacement
         if approach == 0:
             print("Random Replacement")
-            rKey = random.choice(self.MC.keys())
-            print(rKey)
+            rKey = random.choice(list(self.MC.keys()))
+            print('dropped key:{}'.format(rKey))
             self.drop_specific_pic(rKey)
 
         # Least Recently Use (LRU)
@@ -61,17 +60,19 @@ class PicMemCache(object):
         if self.memCacheCapacity < getsizeof(picString):
             print("memCache容量过小，甚至小于本张图片大小，请增大memCache，本次缓存失败")
         elif self.currentMemCache + getsizeof(picString) <= self.memCacheCapacity:
-            print('没超！')
+            # print('没超！')
         # 加入新图片后，没有超过MemCache总容量
             self.MC[keyID] = picString
             self.currentMemCache += getsizeof(picString)
         else:
-            print('超了')
+            # print('超了')
+
         # 加入新图片后，超过了MemCache总容量，需要丢掉图片，存入新图片
             while self.currentMemCache + getsizeof(picString) > self.memCacheCapacity:
                 self.drop_pic(DROP_APPROACH)
             self.MC[keyID] = picString
             self.currentMemCache += getsizeof(picString)
+            print('Memcache set key {}'.format(keyID))
 
     def get_pic(self, keyID):
         # 当用户看图时，调用此函数
@@ -111,8 +112,8 @@ class PicMemCache(object):
     def get_info(self):
         # for test
         print("currentMem: ",self.currentMemCache)
-        print("memCacheCapacity: ", self.memCacheCapacity)
-        print(self.MC)
+        # print("memCacheCapacity: ", self.memCacheCapacity)
+        # print(self.MC)
 
 
     def write2db(self):
@@ -128,54 +129,15 @@ class PicMemCache(object):
 
 
 # following for test
-memory1 = PicMemCache(200)
-for i in range(6):
+memory1 = PicMemCache(2000)
+for i in range(60):
     memory1.put_pic(i,"picture1")
-    # memory1.get_info()
+    memory1.get_info()
 # memory1.drop_pic(DROP_APPROACH)
 # memory1.clear_memcache() # 测试正常
 # memory1.Front_end_upload(4)  # 测试正常
 # memory1.refreshConfiguration(0)  # 测试正常
-print(memory1.get_pic(8))
-# memory1.get_info()
-
-
-
-@webapp.route('/')
-def main():
-    return render_template("main.html")
-
-@webapp.route('/get',methods=['POST'])
-def get():
-    key = request.form.get('key')
-
-    if key in memcache:
-        value = memcache[key]
-        response = webapp.response_class(
-            response=json.dumps(value),
-            status=200,
-            mimetype='application/json'
-        )
-    else:
-        response = webapp.response_class(
-            response=json.dumps("Unknown key"),
-            status=400,
-            mimetype='application/json'
-        )
-
-    return response
-
-@webapp.route('/put',methods=['POST'])
-def put():
-    key = request.form.get('key')
-    value = request.form.get('value')
-    memcache[key] = value
-
-    response = webapp.response_class(
-        response=json.dumps("OK"),
-        status=200,
-        mimetype='application/json'
-    )
-
-    return response
+# print(memory1.get_pic(8))
+# memory1.drop_specific_pic(4)
+memory1.get_info()
 
