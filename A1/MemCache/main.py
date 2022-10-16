@@ -3,12 +3,14 @@ from sys import getsizeof
 import random
 from datetime import datetime
 
-# for database
+# database
 import mysql.connector
 from config import db_config
 
 # flask
-from MemCache import webapp_memcache
+from A1.MemCache import webapp_memcache
+from flask import jsonify,request
+
 
 # database prepare & connect
 def connect_to_database():
@@ -17,10 +19,10 @@ def connect_to_database():
                                    host=db_config['host'],
                                    database=db_config['database'],
                                    auth_plugin='mysql_native_password')
-
 def get_db():
     db = connect_to_database()
     return db
+
 
 # @webapp.teardown_appcontext
 # def teardown_db(exception):
@@ -33,8 +35,7 @@ def get_db():
 class PicMemCache(object):
 
     def __init__(self, memCacheCapacity=None) -> None:
-
-        # 从db读取memCacheCapacity，但此处没有对数据合法性进行验证
+        # get memCacheCapacity from db，but此处没有对数据合法性进行验证
         cnx = get_db()
         cursor = cnx.cursor()
         query = "SELECT Capacity FROM configuration WHERE id = 1"
@@ -42,7 +43,7 @@ class PicMemCache(object):
         # self.memCacheCapacity = memCacheCapacity
         self.memCacheCapacity = cursor.fetchone()[0]
 
-        # 统计变量
+        # Statistical variables
         self.drop_approach = 1
         self.currentMemCache = 0
         self.ItemNum = 0
@@ -55,13 +56,16 @@ class PicMemCache(object):
         print("memCacheCapacity", self.memCacheCapacity)
 
     def drop_specific_pic(self, keyID):
-        # invalidateKey(key) to drop a specific key.
-        self.currentMemCache -= getsizeof(self.MC[keyID])
-        self.MC.pop(keyID)
-        self.ItemNum -= 1
+        if keyID in self.MC.keys():
+            # invalidateKey(key) to drop a specific key.
+            self.currentMemCache -= getsizeof(self.MC[keyID])
+            self.MC.pop(keyID)
+            self.ItemNum -= 1
+            # self.write_statistics_2db()
         # 返回成功与否
 
-    def drop_pic(self, approach=1):
+    def drop_pic(self, approach=0):
+        # The default method is Random Replacement
         # Random Replacement
         if approach == 0:
             print("Random Replacement")
@@ -74,20 +78,19 @@ class PicMemCache(object):
             print("LRU")
             self.drop_specific_pic(next(iter(self.MC)))
 
-
     def put_pic(self, keyID, picString):
-        # 具体的写入过程，不可直接调用
+        # 具体的图片写入memcache过程，不可首次调用
         if self.memCacheCapacity < getsizeof(picString):
             print("memCache容量过小，甚至小于本张图片大小，请增大memCache，本次缓存失败")
+            return
         elif self.currentMemCache + getsizeof(picString) <= self.memCacheCapacity:
             # 加入新图片后，没有超过MemCache总容量
-            # print('没超！')
             self.MC[keyID] = picString
             self.currentMemCache += getsizeof(picString)
             self.ItemNum += 1
+            # self.write_statistics_2db()
         else:
-            # 加入新图片后，超过了MemCache总容量。我们需要丢掉图片，存入新图片
-            # print('超了')
+            # 加入新图片后，超过了MemCache总容量：需要丢掉图片，存入新图片
 
             cnx = get_db()
             cursor = cnx.cursor()
@@ -101,74 +104,80 @@ class PicMemCache(object):
             self.MC[keyID] = picString
             self.currentMemCache += getsizeof(picString)
             self.ItemNum += 1
+            # self.write_statistics_2db()
             print('Memcache set key {}'.format(keyID))
 
     def get_pic(self, keyID):
-        # 当用户看图时，调用此函数
-        # 唯一写入memCache的情况
+        # 功能：1.需要看图时，加速；2.判断一张图片是否在memcache中
+        # 唯一的，调用写入memCache的情况
 
         self.GetPicRequestNum += 1
 
-        if self.MC[keyID] != -1:
+        if keyID in self.MC.keys():
             # 调用的图片就在MemCache
             self.MC.move_to_end(key=keyID, last=True)
-            # 需要：将图片发送到前端
-            return self.MC[keyID]
             self.HitNum += 1
+            # self.write_statistics_2db()
+            # Returns the cache(string) of the image
+            return self.MC[keyID]
         else:
             # 调用的图片不在MemCache
             self.MissNum += 1
             print("MemCache无此图片")
-            # 从前端接收图片string，然后存入memCache
-            # self.put_pic(keyID, picStrin) —— 这里picStrin参数怎么处理？
-
+            # self.write_statistics_2db()
+            return None
 
     def clear_memcache(self):
         self.MC.clear()
         # if self.MC == None: 这里需要判断空嘛
+
+        # 所有统计清零
         self.currentMemCache = 0
         self.ItemNum = 0
-        # 统计数据是否删除
-
+        self.TotalRequestNum = 0
+        self.MissNum = 0
+        self.HitNum = 0
+        self.GetPicRequestNum = 0
+        # self.write_statistics_2db()
 
     def refreshConfiguration(self):
-        # 能否在一个函数内，得到调用2次数据库
         cnx = get_db()
         cursor = cnx.cursor()
-        query = "SELECT Capacity FROM configuration WHERE id = 1"
+        query = "SELECT Capacity,ReplacePolicy FROM configuration WHERE id = 1"
         cursor.execute(query)
-        newMemCacheCapacity = cursor.fetchone()[0]
-
-        if newMemCacheCapacity < 0:
-            # 最好在前端验证，不能在数据库中存非正常值
-            print("MemCacheCapacity应该大于等于0，本次更改失败")
+        result = cursor.fetchone()
+        if not result:
+            print('数据库里没配置，拜拜')
+            return '数据库里没配置，拜拜'
         else:
-            cnx = get_db()
-            cursor = cnx.cursor()
-            query = "SELECT ReplacePolicy FROM configuration WHERE id = 1"
-            cursor.execute(query)
-            self.drop_approach = cursor.fetchone()[0]
+            newMemCacheCapacity = result[0]
+            newDropApproach = result[1]
+
+            if newMemCacheCapacity < 0 or newDropApproach not in [0,1]:
+                # 数据库合规性检查
+                print('数据库配置不合规范，拜拜')
+                return '数据库配置不合规范，拜拜'
+            self.drop_approach = newDropApproach
             print("drop_approach: ", self.drop_approach)
 
             while newMemCacheCapacity < self.currentMemCache:
                 self.drop_pic(self.drop_approach)
             self.memCacheCapacity = newMemCacheCapacity
+            return '成功啦，嘿嘿'
 
-
-    def Front_end_upload(self, keyID):
-        # 用于前端上传时，若MemCache内有同KeyID图片，则drop。没有则无操作
-        if self.MC[keyID] != -1:
-            self.drop_specific_pic(keyID)
-
+    # def Front_end_upload(self, keyID):
+    #     # 用于前端上传时，若MemCache内有同KeyID图片，则drop。没有则无操作
+    #     if self.MC[keyID] != -1:
+    #         self.drop_specific_pic(keyID)
 
     def get_info(self):
         # for test
-        print("currentMem: ",self.currentMemCache)
+        print("currentMem: ", self.currentMemCache)
         # print("memCacheCapacity: ", self.memCacheCapacity)
         # print(self.MC)
 
-
     def write_statistics_2db(self):
+        # 本部分尚有问题没解决，但不影响功能
         # 在每个函数后面写这个，还是在route写
         cnx = get_db()
         cursor = cnx.cursor()
@@ -187,56 +196,96 @@ class PicMemCache(object):
                                self.currentMemCache,
                                self.TotalRequestNum,
                                self.GetPicRequestNum,
-                               self.MissNum / self.GetPicRequestNum,
-                               self.HitNum / self.GetPicRequestNum))
+                               -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
+                               -1 if self.GetPicRequestNum == 0 else self.HitNum / self.GetPicRequestNum))
         cnx.commit()
 
 
 # following for test
 memory1 = PicMemCache()
-for i in range(60):
-    memory1.put_pic(i,"picture1")
-    memory1.get_info()
+
+
+# for i in range(60):
+#     memory1.put_pic(i,"picture1")
+#     memory1.get_info()
 # memory1.drop_pic(DROP_APPROACH)
 # memory1.clear_memcache() # 测试正常
 # memory1.Front_end_upload(4)  # 测试正常
 # memory1.refreshConfiguration(0)  # 测试正常
 # print(memory1.get_pic(8))
 # memory1.drop_specific_pic(4)
-memory1.get_info()
+# memory1.get_info()
 
 
-
-
-@webapp_memcache.route('/PUT',methods=['GET'])
-def PUT(key, value):
+@webapp_memcache.route('/put_kv', methods=['POST'])
+def put_kv():
+    # 写入mamcache
+    key = request.form.get('key')
+    value = request.form.get('value')
     # Fig 1.(5) PUT
     memory1.put_pic(keyID=key, picString=value)
     # Fig 1.(6) OK
+    response = jsonify(success='True')
+    return response
 
-@webapp_memcache.route('/GET', methods=['GET'])
-def GET(key):
+
+@webapp_memcache.route('/get', methods=['POST'])
+def get():
+    # memcache中有该图片时，返回”Ture+图片cache“；没有时，返回”false+空“
+    key = request.form.get('key')
     # Fig 1.(1) GET
-    memory1.get_pic(keyID = key)
-    # Fig 1.(2) MISS
+    pic_value = memory1.get_pic(keyID=key)
+
+    if pic_value:
+        # OK
+        response = jsonify(success='True',
+                           content=pic_value)
+    else:
+        # Fig 1.(2) MISS
+        response = jsonify(success='False',
+                           content='')
+    return response
 
 
-@webapp_memcache.route('/CLEAR', methods=['GET'])
-def CLEAR():
+@webapp_memcache.route('/clear', methods=['POST'])
+def clear():
+    # 清除memcache
     memory1.clear_memcache()
+    response = jsonify(success='True')
+    return response
 
 
-@webapp_memcache.route('/invalidateKey', methods=['GET'])
-def invalidateKey(key):
+@webapp_memcache.route('/invalidateKey', methods=['POST'])
+def invalidateKey():
+    # 2个地方使用本函数：1.从memcache中，根据key删除特定图片；2.upload图片时，用于去掉重复keyID图片的memcache
+    # Yizhou你上传图片时，调用就行，不用管是不是重复keyID啥的都不用管
     # Fig 2.(2) invalidateKey
+    key = request.form.get('key')
     memory1.drop_specific_pic(keyID=key)
     # Fig 2.(3) OK
+    response = jsonify(success='True')
+    return response
 
 
-@webapp_memcache.route('/refreshConfiguration', methods=['GET'])
+@webapp_memcache.route('/refreshConfiguration', methods=['POST'])
 def refreshConfiguration():
-    memory1.refreshConfiguration()
+    res = memory1.refreshConfiguration()
+    if '嘿' in res:
+        # 成功从数据库读取新参数，并更改了参数配置
+        response = jsonify(success='True')
+    else:
+        # 数据规范有问题（2种情况），没有更改，具体原因见读取message即可。
+        response = jsonify(success='False',
+                           message=res)
+    return response
 
-@webapp_memcache.route('/UPLOAD', methods=['GET'])
-def Front_end_upload(key):
-    memory1.Front_end_upload(keyID=key)
+
+# @webapp_memcache.route('/upload', methods=['POST'])
+# def Front_end_upload():
+#     key = request.form.get('key')
+#     memory1.Front_end_upload(keyID=key)
+#     response = jsonify(success='True')
+#     return response
+
+
+
