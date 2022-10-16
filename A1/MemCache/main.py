@@ -1,12 +1,16 @@
 from collections import OrderedDict
 from sys import getsizeof
 import random
+from datetime import datetime
 
 # for database
 import mysql.connector
 from config import db_config
 
-# database prepare
+# flask
+from MemCache import webapp_memcache
+
+# database prepare & connect
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
                                    password=db_config['password'],
@@ -29,7 +33,6 @@ def get_db():
 class PicMemCache(object):
 
     def __init__(self, memCacheCapacity=None) -> None:
-        # 用户设定的MemCache大小，需从数据库读取
 
         # 从db读取memCacheCapacity，但此处没有对数据合法性进行验证
         cnx = get_db()
@@ -77,15 +80,14 @@ class PicMemCache(object):
         if self.memCacheCapacity < getsizeof(picString):
             print("memCache容量过小，甚至小于本张图片大小，请增大memCache，本次缓存失败")
         elif self.currentMemCache + getsizeof(picString) <= self.memCacheCapacity:
+            # 加入新图片后，没有超过MemCache总容量
             # print('没超！')
-        # 加入新图片后，没有超过MemCache总容量
             self.MC[keyID] = picString
             self.currentMemCache += getsizeof(picString)
             self.ItemNum += 1
         else:
+            # 加入新图片后，超过了MemCache总容量。我们需要丢掉图片，存入新图片
             # print('超了')
-
-        # 加入新图片后，超过了MemCache总容量，需要丢掉图片，存入新图片
 
             cnx = get_db()
             cursor = cnx.cursor()
@@ -126,9 +128,17 @@ class PicMemCache(object):
         # if self.MC == None: 这里需要判断空嘛
         self.currentMemCache = 0
         self.ItemNum = 0
+        # 统计数据是否删除
 
 
-    def refreshConfiguration(self, newMemCacheCapacity):
+    def refreshConfiguration(self):
+        # 能否在一个函数内，得到调用2次数据库
+        cnx = get_db()
+        cursor = cnx.cursor()
+        query = "SELECT Capacity FROM configuration WHERE id = 1"
+        cursor.execute(query)
+        newMemCacheCapacity = cursor.fetchone()[0]
+
         if newMemCacheCapacity < 0:
             # 最好在前端验证，不能在数据库中存非正常值
             print("MemCacheCapacity应该大于等于0，本次更改失败")
@@ -158,9 +168,22 @@ class PicMemCache(object):
         # print(self.MC)
 
 
-    # def write2db(self):
+    def write_statistics_2db(self):
+        # 在每个函数后面写这个，还是在route写
+        cnx = get_db()
+        cursor = cnx.cursor()
+        query = ''' INSERT INTO statistics (Time, ItemNum, CurrentMemCache, TotalRequestNum, GetPicRequestNum, MissRate, HitRate)
+                    VALUES (datetime.now(), 
+                            self.ItemNum, 
+                            self.currentMemCache, 
+                            self.TotalRequestNum, 
+                            self.GetPicRequestNum, 
+                            self.MissNum/self.GetPicRequestNum, 
+                            self.HitNum/self.GetPicRequestNum)
+                '''
 
-
+        cursor.execute(query)
+        cnx.commit()
 
 
 # following for test
@@ -176,3 +199,32 @@ for i in range(60):
 # memory1.drop_specific_pic(4)
 memory1.get_info()
 
+
+
+
+@webapp_memcache.route('/PUT',methods=['GET'])
+def PUT(key, value):
+    # 理论上不能应该由前端主动调用
+    memory1.put_pic(keyID=key, picString=value)
+
+@webapp_memcache.route('/GET', methods=['GET'])
+def GET(key):
+    memory1.get_pic(keyID = key)
+
+@webapp_memcache.route('/CLEAR', methods=['GET'])
+def CLEAR():
+    memory1.clear_memcache()
+
+
+@webapp_memcache.route('/invalidateKey', methods=['GET'])
+def invalidateKey(key):
+    memory1.drop_specific_pic(keyID=key)
+
+
+@webapp_memcache.route('/refreshConfiguration', methods=['GET'])
+def refreshConfiguration():
+    memory1.refreshConfiguration()
+
+@webapp_memcache.route('/UPLOAD', methods=['GET'])
+def Front_end_upload(key):
+    memory1.Front_end_upload(keyID=key)

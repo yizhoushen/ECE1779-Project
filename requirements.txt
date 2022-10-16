@@ -9,3 +9,4 @@ mysql-connector-python==8.0.30
 protobuf==3.20.1
 Werkzeug==2.2.2
 OrderedDict==1.1
+datetime==4.7

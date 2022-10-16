@@ -1,8 +1,7 @@
 from flask import Flask
+from MemCache import webapp_mamcache
 
-global memcache
-
-webapp = Flask(__name__)
+webapp_memcache = Flask(__name__)
 memcache = {}
 
 from MemCache import main
