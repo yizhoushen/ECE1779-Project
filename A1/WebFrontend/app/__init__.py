@@ -5,7 +5,7 @@ global memcache
 webapp = Flask(__name__)
 memcache = {}
 
-from WebFrontend import main
+from app import main
 
 
 

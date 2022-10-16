@@ -1,14 +1,16 @@
 
 from flask import render_template, url_for, request, g
-from WebFrontend import webapp, memcache
+from app import webapp, memcache
 from flask import json
 
 import mysql.connector
-from WebFrontend.config import db_config
+from app.config import db_config
 import sys
 
 import tempfile
 import os
+
+import requests
 
 # os.chdir(os.path.abspath("./A1/WebFrontend"))
 
@@ -57,6 +59,10 @@ def image_upload():
     
     ##################################
     # todo: invilidate memcache
+    data = {'key': new_key}
+    response = requests.post("http://127.0.0.1:5001/invalidateKey", data=data)
+    print(response.text)
+    # return "SUUUUCCCCCEEESSSSS"
     
     s = new_image.filename.split(".")
     file_extension = s[len(s)-1]
@@ -80,7 +86,7 @@ def image_upload():
     cnx.commit()
 
     # Assume the current directory is .../ECE1779-Project
-    new_path = os.path.join(os.path.abspath("./A1/WebFrontend"), dbimage_path)
+    new_path = os.path.join(os.path.abspath("./A1/WebFrontend/app"), dbimage_path)
     save_path = new_path.replace("\\", "/")
     new_image.save(save_path)
     return "Success"

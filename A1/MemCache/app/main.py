@@ -5,12 +5,12 @@ from datetime import datetime
 
 # database
 import mysql.connector
-from config import db_config
+from app.config import db_config
 
 # flask
-from A1.MemCache import webapp_memcache
+from app import webapp_memcache
 from flask import jsonify,request
-
+from flask import json
 
 # database prepare & connect
 def connect_to_database():
@@ -260,6 +260,7 @@ def invalidateKey():
     # 2个地方使用本函数：1.从memcache中，根据key删除特定图片；2.upload图片时，用于去掉重复keyID图片的memcache
     # Yizhou你上传图片时，调用就行，不用管是不是重复keyID啥的都不用管
     # Fig 2.(2) invalidateKey
+
     key = request.form.get('key')
     memory1.drop_specific_pic(keyID=key)
     # Fig 2.(3) OK
@@ -288,4 +289,6 @@ def refreshConfiguration():
 #     return response
 
 
-
+@webapp_memcache.route('/',methods=['GET'])
+def main():
+    return "Hello"
