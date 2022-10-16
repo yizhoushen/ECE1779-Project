@@ -195,10 +195,23 @@ def config_mem_cache():
         cursor.execute(query, (memcache_szie, int(memcache_policy)))
         cnx.commit()
         
+        response = requests.post("http://127.0.0.1:5001/refreshConfiguration", timeout=5)
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            return "Cache configuration is successful"
+        elif res_json['success'] == 'False':
+            return "Cache configuration failed!"
+        else:
+            return "Failed to get repsonse from memcache/clear"
+
         return "Success"
     elif 'cache_clear' in request.form and 'cache_configure' not in request.form:
-        ### todo: Send some JSON request to memcache instance
-        return "Cache Cleared"
+        response = requests.post("http://127.0.0.1:5001/clear", timeout=5)
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            return "Cache Cleared"
+        else:
+            return "Failed to get repsonse from memcache/clear"
     else:
         return "Invalid! Please choose cache configure or cache clear"
 
