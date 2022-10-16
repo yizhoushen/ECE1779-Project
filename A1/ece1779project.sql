@@ -31,28 +31,28 @@ VALUES(
 
 create table statistics
 (
-id int NOT NULL,
-Time datetime NOT NULL,
-ItemNum int NOT NULL,
-CurrentMemCache int NOT NULL,
-TotalRequestNum int NOT NULL,
-GetPicRequestNum int NOT NULL,
-MissRate decimal(4,3),
-HitRate decimal(4,3),
-PRIMARY KEY(id)
+    id               int auto_increment
+        primary key,
+    ItemNum          int           not null,
+    CurrentMemCache  int           not null,
+    TotalRequestNum  int           not null,
+    MissRate         decimal(4, 3) not null,
+    HitRate          decimal(4, 3) not null,
+    GetPicRequestNum int           not null,
+    CurrTime         datetime      null
 );
 
-INSERT INTO statistics
-VALUES(
-1,
-'2022-01-01 00:00:00',
-5,
-500,
-10,
-4,
-0.650,
-0.350
-);
+-- INSERT INTO statistics
+-- VALUES(
+-- 1,
+-- '2022-01-01 00:00:00',
+-- 5,
+-- 500,
+-- 10,
+-- 4,
+-- 0.650,
+-- 0.350
+-- );
 
 -- select * from imagelist;
 -- select * from configuration;

@@ -1,3 +1,5 @@
+import threading
+import time
 from collections import OrderedDict
 from sys import getsizeof
 import random
@@ -8,10 +10,11 @@ import mysql.connector
 from app.config import db_config
 
 # flask
-from app import webapp_memcache
-from flask import jsonify,request
+from MemCache.app import webapp_memcache
+from flask import jsonify, request
 from flask import json
-from flask import render_template
+
+SECONDS_WRITING_2DB_INTERVAL = 5
 
 # database prepare & connect
 def connect_to_database():
@@ -57,6 +60,7 @@ class PicMemCache(object):
         print("memCacheCapacity", self.memCacheCapacity)
 
     def drop_specific_pic(self, keyID):
+        self.TotalRequestNum += 1
         if keyID in self.MC.keys():
             # invalidateKey(key) to drop a specific key.
             self.currentMemCache -= getsizeof(self.MC[keyID])
@@ -80,6 +84,8 @@ class PicMemCache(object):
             self.drop_specific_pic(next(iter(self.MC)))
 
     def put_pic(self, keyID, picString):
+        self.TotalRequestNum += 1
+        print("put func: ", threading.current_thread().name)
         # 具体的图片写入memcache过程，不可首次调用
         if self.memCacheCapacity < getsizeof(picString):
             print("memCache容量过小，甚至小于本张图片大小，请增大memCache，本次缓存失败")
@@ -111,6 +117,8 @@ class PicMemCache(object):
     def get_pic(self, keyID):
         # 功能：1.需要看图时，加速；2.判断一张图片是否在memcache中
         # 唯一的，调用写入memCache的情况
+        self.TotalRequestNum += 1
+        print("get func: ", threading.current_thread().name)
 
         self.GetPicRequestNum += 1
 
@@ -142,6 +150,7 @@ class PicMemCache(object):
         # self.write_statistics_2db()
 
     def refreshConfiguration(self):
+        self.TotalRequestNum += 1
         cnx = get_db()
         cursor = cnx.cursor()
         query = "SELECT Capacity,ReplacePolicy FROM configuration WHERE id = 1"
@@ -149,7 +158,7 @@ class PicMemCache(object):
         result = cursor.fetchone()
         if not result:
             print('数据库里没配置，拜拜')
-            return '数据库里没配置，拜拜'
+            return 'Database reconfiguration failed! Because there is no configuration in the database.'
         else:
             newMemCacheCapacity = result[0]
             newDropApproach = result[1]
@@ -157,14 +166,14 @@ class PicMemCache(object):
             if newMemCacheCapacity < 0 or newDropApproach not in [0,1]:
                 # 数据库合规性检查
                 print('数据库配置不合规范，拜拜')
-                return '数据库配置不合规范，拜拜'
+                return 'Database reconfiguration failed! Because the data in the database is invalid.'
             self.drop_approach = newDropApproach
             print("drop_approach: ", self.drop_approach)
 
             while newMemCacheCapacity < self.currentMemCache:
                 self.drop_pic(self.drop_approach)
             self.memCacheCapacity = newMemCacheCapacity
-            return '成功啦，嘿嘿'
+            return 'Database reconfiguration successful!'
 
     # def Front_end_upload(self, keyID):
     #     # 用于前端上传时，若MemCache内有同KeyID图片，则drop。没有则无操作
@@ -178,32 +187,35 @@ class PicMemCache(object):
         # print(self.MC)
 
     def write_statistics_2db(self):
-        # 本部分尚有问题没解决，但不影响功能
-        # 在每个函数后面写这个，还是在route写
-        cnx = get_db()
-        cursor = cnx.cursor()
-        query = ''' INSERT INTO statistics (Time, ItemNum, CurrentMemCache, TotalRequestNum, GetPicRequestNum, MissRate, HitRate)
-                    VALUES ( Time = %s, 
-                             ItemNum = %s, 
-                             CurrentMemCache = %s, 
-                             TotalRequestNum = %s, 
-                             GetPicRequestNum = %s, 
-                             MissRate = %s, 
-                             HitRate = %s)
-                '''
+        while True:
+            print("statistic report: ", threading.current_thread().name)
+            print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-        cursor.execute(query, (datetime.now(),
-                               self.ItemNum,
-                               self.currentMemCache,
-                               self.TotalRequestNum,
-                               self.GetPicRequestNum,
-                               -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
-                               -1 if self.GetPicRequestNum == 0 else self.HitNum / self.GetPicRequestNum))
-        cnx.commit()
+            cnx = get_db()
+            cursor = cnx.cursor()
+            query = ''' INSERT INTO statistics (CurrTime, 
+                                                ItemNum, 
+                                                CurrentMemCache, 
+                                                TotalRequestNum, 
+                                                GetPicRequestNum, 
+                                                MissRate, 
+                                                HitRate)
+                        VALUES (%s,%s,%s,%s,%s, %s,%s)
+                    '''
+            cursor.execute(query, (datetime.now().strftime("%y-%m-%d %H:%M:%S"),
+                                   self.ItemNum,
+                                   self.currentMemCache,
+                                   self.TotalRequestNum,
+                                   self.GetPicRequestNum,
+                                   -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
+                                   -1 if self.GetPicRequestNum == 0 else self.HitNum / self.GetPicRequestNum))
+            cnx.commit()
+            time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
 
 # following for test
 memory1 = PicMemCache()
+threading.Thread(target=memory1.write_statistics_2db, daemon=True).start()
 
 
 # for i in range(60):
@@ -272,7 +284,7 @@ def invalidateKey():
 @webapp_memcache.route('/refreshConfiguration', methods=['POST'])
 def refreshConfiguration():
     res = memory1.refreshConfiguration()
-    if '嘿' in res:
+    if 'successful' in res:
         # 成功从数据库读取新参数，并更改了参数配置
         response = jsonify(success='True')
     else:
