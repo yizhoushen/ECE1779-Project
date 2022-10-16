@@ -1,13 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
 
-    <table /> 
+    <table> 
     <thead> 
-           <th>ItemNum</th>
-           <th>TotalSize</th>
-           <th>RequestNum</th>
-           <th>MissRate</th>
-           <th>HitRate</th>
+        <th>Time</th>
+        <th>ItemNum</th>
+        <th>Occupation</th>
+        <th>TotalRequests</th>
+        <th>GetPicRequests</th>
+        <th>MissRate</th>
+        <th>HitRate</th>
     </thead> 
     {% for row in cursor %}
         <tr>
@@ -16,6 +18,8 @@
             <td>{{ row[3]}}</td>
             <td>{{ row[4]}}</td>
             <td>{{ row[5]}}</td>
+            <td>{{ row[6]}}</td>
+            <td>{{ row[7]}}</td>
         </tr>
     {% endfor %}
     </table>
