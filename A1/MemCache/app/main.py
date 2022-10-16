@@ -11,6 +11,7 @@ from app.config import db_config
 from app import webapp_memcache
 from flask import jsonify,request
 from flask import json
+from flask import render_template
 
 # database prepare & connect
 def connect_to_database():
@@ -291,4 +292,4 @@ def refreshConfiguration():
 
 @webapp_memcache.route('/',methods=['GET'])
 def main():
-    return "Hello"
+    return render_template("memcache_view.html", memory1=memory1)

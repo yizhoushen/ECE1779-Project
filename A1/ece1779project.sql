@@ -32,9 +32,11 @@ VALUES(
 create table statistics
 (
 id int NOT NULL,
+Time datetime NOT NULL,
 ItemNum int NOT NULL,
-TotalSize int NOT NULL,
-RequestNum int NOT NULL,
+CurrentMemCache int NOT NULL,
+TotalRequestNum int NOT NULL,
+GetPicRequestNum int NOT NULL,
 MissRate decimal(4,3),
 HitRate decimal(4,3),
 PRIMARY KEY(id)
@@ -43,9 +45,11 @@ PRIMARY KEY(id)
 INSERT INTO statistics
 VALUES(
 1,
+'2022-01-01 00:00:00',
 5,
 500,
 10,
+4,
 0.650,
 0.350
 );
