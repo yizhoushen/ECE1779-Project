@@ -173,16 +173,22 @@ class PicMemCache(object):
         cnx = get_db()
         cursor = cnx.cursor()
         query = ''' INSERT INTO statistics (Time, ItemNum, CurrentMemCache, TotalRequestNum, GetPicRequestNum, MissRate, HitRate)
-                    VALUES (datetime.now(), 
-                            self.ItemNum, 
-                            self.currentMemCache, 
-                            self.TotalRequestNum, 
-                            self.GetPicRequestNum, 
-                            self.MissNum/self.GetPicRequestNum, 
-                            self.HitNum/self.GetPicRequestNum)
+                    VALUES ( Time = %s, 
+                             ItemNum = %s, 
+                             CurrentMemCache = %s, 
+                             TotalRequestNum = %s, 
+                             GetPicRequestNum = %s, 
+                             MissRate = %s, 
+                             HitRate = %s)
                 '''
 
-        cursor.execute(query)
+        cursor.execute(query, (datetime.now(),
+                               self.ItemNum,
+                               self.currentMemCache,
+                               self.TotalRequestNum,
+                               self.GetPicRequestNum,
+                               self.MissNum / self.GetPicRequestNum,
+                               self.HitNum / self.GetPicRequestNum))
         cnx.commit()
 
 
@@ -204,12 +210,16 @@ memory1.get_info()
 
 @webapp_memcache.route('/PUT',methods=['GET'])
 def PUT(key, value):
-    # 理论上不能应该由前端主动调用
+    # Fig 1.(5) PUT
     memory1.put_pic(keyID=key, picString=value)
+    # Fig 1.(6) OK
 
 @webapp_memcache.route('/GET', methods=['GET'])
 def GET(key):
+    # Fig 1.(1) GET
     memory1.get_pic(keyID = key)
+    # Fig 1.(2) MISS
+
 
 @webapp_memcache.route('/CLEAR', methods=['GET'])
 def CLEAR():
@@ -218,7 +228,9 @@ def CLEAR():
 
 @webapp_memcache.route('/invalidateKey', methods=['GET'])
 def invalidateKey(key):
+    # Fig 2.(2) invalidateKey
     memory1.drop_specific_pic(keyID=key)
+    # Fig 2.(3) OK
 
 
 @webapp_memcache.route('/refreshConfiguration', methods=['GET'])
