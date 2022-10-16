@@ -11,6 +11,7 @@ import tempfile
 import os
 
 import requests
+import base64
 
 # os.chdir(os.path.abspath("./A1/WebFrontend"))
 
@@ -57,12 +58,10 @@ def image_upload():
     if new_image.filename == '':
         return 'Missing file name'
     
-    ##################################
-    # todo: invilidate memcache
+    # invilidate memcache
     data = {'key': new_key}
-    response = requests.post("http://127.0.0.1:5001/invalidateKey", data=data)
+    response = requests.post("http://127.0.0.1:5001/invalidateKey", data=data, timeout=5)
     print(response.text)
-    # return "SUUUUCCCCCEEESSSSS"
     
     s = new_image.filename.split(".")
     file_extension = s[len(s)-1]
@@ -91,44 +90,6 @@ def image_upload():
     new_image.save(save_path)
     return "Success"
 
-    #========== initial apporach
-
-    # temp_path = os.path.join("./static/images", new_image.filename)
-    # dbimage_path = temp_path.replace("\\", "/")
-
-    # cnx = get_db()
-    # cursor = cnx.cursor()
-
-    # query_check = '''   SELECT ImagePath FROM imagelist
-    #                     WHERE ImageID = %s'''
-
-    # query_insert = '''  INSERT INTO imagelist(ImageID, ImagePath)
-    #                     VALUES(%s, %s) as newimage'''
-
-    # query_update = '''  UPDATE imagelist
-    #                     SET ImagePath = %s
-    #                     WHERE ImageID = %s'''
-
-    # query_overwrite = '''   INSERT INTO imagelist(ImageID, ImagePath)
-    #                         VALUES(%s, %s) as newimage
-    #                         ON DUPLICATE KEY UPDATE ImagePath=newimage.ImagePath'''
-
-    # cursor.execute(query_check, (new_key,))
-    # row = cursor.fetchone()
-    # if row == None:
-    #     cursor.execute(query_insert, (new_key, dbimage_path,))
-    #     cnx.commit()
-    # else:
-    #     old_image_path = row[0]
-    #     delete_path = os.path.join("C:/Users/Harry/MyDocs/UofT/ECE1779/ECE1779-Project/A1/WebFrontend", old_image_path)
-    #     os.remove(delete_path)
-    #     cursor.execute(query_update, (dbimage_path, new_key,))
-    #     cnx.commit()
-
-    # new_path = os.path.join("C:/Users/Harry/MyDocs/UofT/ECE1779/ECE1779-Project/A1/WebFrontend", dbimage_path)
-    # save_path = new_path.replace("\\", "/")
-    # new_image.save(save_path)
-    # return "Success"
 
 @webapp.route('/display_form', methods=['GET'])
 def display_form():
@@ -136,7 +97,6 @@ def display_form():
 
 @webapp.route('/image_display', methods=['POST'])
 def image_display():
-    # implement /image_display
     if 'image_key' not in request.form:
         return "Need a image key"
 
@@ -145,22 +105,47 @@ def image_display():
     if image_key == '':
         return "Need a image key"
 
-    cnx = get_db()
-    cursor = cnx.cursor()
+    # first try getting from memcache
+    data = {'key': image_key}
+    response = requests.post("http://127.0.0.1:5001/get", data=data, timeout=5)
+    print("response type from memcache/get: {}".format(type(response.json())))
+    res_json = response.json()
 
-    query = ''' SELECT ImagePath FROM imagelist
-                WHERE ImageID = %s'''
+    if res_json['success'] == 'True':
+        # display encodeed image string from memcache
+        encoded_string = res_json['content']
+        return render_template("image_display.html", title="Image Display", encoded_string=encoded_string)
+    else:
+        print("No Such image in memcache, getting from local file system...")
 
-    cursor.execute(query, (image_key,))
-    row = cursor.fetchone()
-    
-    if row == None:
-        return "No such image"
+        cnx = get_db()
+        cursor = cnx.cursor()
 
-    # image_path = os.path.join('static/images', row[0])
-    image_path = row[0]
+        query = ''' SELECT ImagePath FROM imagelist
+                    WHERE ImageID = %s'''
 
-    return render_template("image_display.html", title="Image Display", image_path=image_path)
+        cursor.execute(query, (image_key,))
+        row = cursor.fetchone()
+        
+        if row == None:
+            return "No such image"
+
+        image_path = row[0]
+
+        new_path = os.path.join(os.path.abspath("./A1/WebFrontend/app"), image_path)
+        read_path = new_path.replace("\\", "/")
+
+        with open(read_path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read())
+        
+        data = {'key': image_key, 'value': encoded_string}
+        response = requests.post("http://127.0.0.1:5001/put_kv", data=data, timeout=5)
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            return render_template("image_display.html", title="Image Display", image_path=image_path)
+        else:
+            return "Failed to get repsonse from memcache/put_kv"
+
 
 
 @webapp.route('/all_keys', methods=['GET'])
@@ -196,7 +181,7 @@ def config_mem_cache():
             return 'MemCache size is empty'
         if memcache_policy == '':
             return 'MemCache Replacement Policy is empty'
-        if memcache_policy != 0 or memcache_policy != 1:
+        if memcache_policy != '0' and memcache_policy != '1':
             return 'Invalid Replacement Policy'
 
         cnx = get_db()
@@ -207,7 +192,7 @@ def config_mem_cache():
                         ReplacePolicy = %s
                     WHERE id = 1'''
 
-        cursor.execute(query, (memcache_szie, memcache_policy))
+        cursor.execute(query, (memcache_szie, int(memcache_policy)))
         cnx.commit()
         
         return "Success"
