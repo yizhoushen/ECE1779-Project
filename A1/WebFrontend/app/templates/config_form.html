@@ -1,7 +1,11 @@
+<nav class="Nav_Menu">
+    <a href="main.html">home</a>
+    <a href="team.html">team</a>
+</nav>
+<div class ='config_form'></div>
 {% extends "base.html" %}
 {% block content %}
 <link rel = "stylesheet" href = "../static/css/mainstyle.css">
-    <div class ='config_form'>
     <form action="{{url_for('config_mem_cache')}}"  enctype="multipart/form-data" method="post">
 
         Memory Cache Size (Bytes):  <input type="text", name="memcache_size"><br />

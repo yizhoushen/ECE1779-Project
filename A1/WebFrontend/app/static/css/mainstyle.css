@@ -1,8 +1,15 @@
+
+body {
+  background: #feffff;
+}
+
 h1 {
     text-align-last: center;
-    color: #999999;
+    margin-left: 60px;
+    color: #605e5e;
     font-size: 60px;
     font-weight: bold;
+    margin-top:100px;
     }
 
 .list{
@@ -13,78 +20,89 @@ h1 {
     font-weight: bold;
 
 }
-body{
-    background-image: url("cloudpic.jpg");
-    background-size: cover;
-    opacity: 1;
-}
 
-.old_main_form{
+.team{
     text-align: center;
-    color: #999999;
+    list-style: inside;
+    color: #6f6d6d;
     font-size: 20px;
     font-weight: bold;
-    margin-top:50px;
 }
 
-.api_test{
+.list a:hover {
+    color: #7ef667;
+  }
+
+.Nav_Menu{
+    padding: 5px 10px;
     text-align: center;
-    color: #999999;
-    font-size: 20px;
-    font-weight: bold;
-    margin-top:50px;
+    float: left;
+    margin-left: 30px;
+    width: 120%;
+    background: #413f3f; }
+
+.Nav_Menu {
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
-.base{
-    text-align: center;
-    color: #999999;
-    font-size: 20px;
-    font-weight: bold;
-    margin-top:50px;
+.Nav_Menu a {
+  color: #d6e5e2;
+  font-size: 1nm;
+  text-transform: uppercase;
+  font-weight: 500;
+  display: inline-block;
+  width: 100px;
 
 }
-.config_form{
-    text-align: center;
-    color: #999999;
-    font-size: 20px;
-    font-weight: bold;
-    margin-top:50px;
+
+.Nav_Menu a:hover {
+  color: #7ef667;
 }
 
 .image_display{
-    text-align: center;
-    color: #999999;
+    text-align-last: center;
+    color: #605e5e;
     font-size: 20px;
     font-weight: bold;
-    margin-top:50px;
-}
+    margin-top:100px;
+    }
 
-.keylist{
-
-    color: #999999;
+.upload_form{
+    text-align-last: center;
+    color: #605e5e;
     font-size: 20px;
     font-weight: bold;
-    margin-top:50px;
-}
+    margin-top:100px;
+    }
 
 .statistics{
+    color: #605e5e;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top:100px;
+    }
 
-    color: #999999;
+.keylist{
+    color: #605e5e;
     font-size: 20px;
     font-weight: bold;
-    margin-top:50px;
-}
-.upload_form{
-    text-align: center;
-    color: #999999;
-    font-size: 20px;
-    font-weight: bold;
-    margin-top:50px;
-}
+    margin-top:100px;
+    }
+
+
 .display_form{
-    text-align: center;
-    color: #999999;
+    color: #605e5e;
     font-size: 20px;
     font-weight: bold;
-    margin-top:50px;
-}
+    margin-top:100px;
+    }
+
+.config_form{
+    color: #605e5e;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top:100px;
+    }
