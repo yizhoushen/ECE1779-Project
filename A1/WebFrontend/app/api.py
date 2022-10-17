@@ -1,5 +1,5 @@
 from app import webapp
-from flask import request, jsonify
+from flask import render_template, request, jsonify, g
 import os
 import requests
 import base64
@@ -79,7 +79,7 @@ def upload_api():
     return response
 
 @webapp.route('/api/list_keys', methods=['POST'])
-def upload_api():
+def list_keys_api():
     cnx = get_db()
     cursor = cnx.cursor()
     query = "SELECT ImageID FROM imagelist"
@@ -94,7 +94,7 @@ def upload_api():
     return response
 
 @webapp.route('/api/key/<key_value>', methods=['POST', 'GET'])
-def upload_api(key_value):
+def get_key_api(key_value):
     data = {'key': key_value}
     response = requests.post("http://127.0.0.1:5001/get", data=data, timeout=5)
     res_json = response.json()
@@ -147,3 +147,23 @@ def upload_api(key_value):
                 }
             })
             return response
+
+
+# test api
+@webapp.route('/api_test_1', methods=['POST', 'GET'])
+def api_test_1():
+    return render_template("api_test.html")
+
+# alternative tests for api 2 & 3
+# also can be tested in /api_test_1
+@webapp.route('/api_test_2', methods=['POST', 'GET'])
+def api_test_2():
+    response = requests.post("http://127.0.0.1:5000/api/list_keys", timeout=5)
+    print("Response from api/key_list: {}".format(response.text))
+    return "okkkk2"
+
+@webapp.route('/api_test_3', methods=['POST', 'GET'])
+def api_test_3():
+    response = requests.post("http://127.0.0.1:5000/api/key/badkey", timeout=5)
+    print("Response from api/key_list: {}".format(response.text))
+    return "okkkk3"

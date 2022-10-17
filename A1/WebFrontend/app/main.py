@@ -226,3 +226,9 @@ def statistics():
 def testpath():
     temp_path = os.path.abspath("./temp_path")
     return temp_path
+
+# @webapp.route('/api_test', methods=['POST', 'GET'])
+# def test_api():
+#     response = requests.post("http://127.0.0.1:5000/api/list_keys", timeout=5)
+#     print("Response from api/key_list: {}".format(response.text))
+#     return "okkkk"

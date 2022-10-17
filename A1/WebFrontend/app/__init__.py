@@ -6,6 +6,7 @@ webapp = Flask(__name__)
 memcache = {}
 
 from app import main
+from app import api
 
 
 
