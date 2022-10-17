@@ -42,6 +42,8 @@ class PicMemCache(object):
         # get memCacheCapacity from db，but此处没有对数据合法性进行验证
         cnx = get_db()
         cursor = cnx.cursor()
+        clear_table_statistics = "truncate table statistics"
+        cursor.execute(clear_table_statistics)
         query = "SELECT Capacity FROM configuration WHERE id = 1"
         cursor.execute(query)
         # self.memCacheCapacity = memCacheCapacity
