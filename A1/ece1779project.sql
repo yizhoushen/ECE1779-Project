@@ -25,7 +25,7 @@ PRIMARY KEY(id)
 INSERT INTO configuration
 VALUES(
 1,
-100,
+1000000,
 0
 );
 

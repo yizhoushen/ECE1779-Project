@@ -2,6 +2,7 @@
 from flask import render_template, url_for, request, g
 from app import webapp, memcache
 from flask import json
+from datetime import datetime, timedelta
 
 import mysql.connector
 from app.config import db_config
@@ -63,14 +64,9 @@ def image_upload():
     response = requests.post("http://127.0.0.1:5001/invalidateKey", data=data, timeout=5)
     print(response.text)
     
+    # path saved in database is ./static/images/<new_key>.<file_extension>
     s = new_image.filename.split(".")
     file_extension = s[len(s)-1]
-    
-    # for some reason only the images in '.../ECE1779-Project/A1/WebFrontend/static' folder can be rendered
-    # images from other folders got 'GET <other_directory> HTTP/1.1 404' error
-    # possible solution: need to manually define static file directory
-    # https://stackoverflow.com/questions/67698211/getting-get-static-css-base-css-http-1-1-404-1795-error-for-static-files
-    
     temp_path = os.path.join("./static/images", "{}.{}".format(new_key, file_extension))
     dbimage_path = temp_path.replace("\\", "/")
 
@@ -85,8 +81,8 @@ def image_upload():
     cnx.commit()
 
     # Assume the current directory is .../ECE1779-Project
-    new_path = os.path.join(os.path.abspath("./A1/WebFrontend/app"), dbimage_path)
-    save_path = new_path.replace("\\", "/")
+    temp_path = os.path.join(os.path.abspath("./A1/WebFrontend/app"), dbimage_path)
+    save_path = temp_path.replace("\\", "/")
     new_image.save(save_path)
     return "Success"
 
@@ -132,8 +128,8 @@ def image_display():
 
         image_path = row[0]
 
-        new_path = os.path.join(os.path.abspath("./A1/WebFrontend/app"), image_path)
-        read_path = new_path.replace("\\", "/")
+        temp_path = os.path.join(os.path.abspath("./A1/WebFrontend/app"), image_path)
+        read_path = temp_path.replace("\\", "/")
 
         with open(read_path, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read())
@@ -219,14 +215,12 @@ def config_mem_cache():
 @webapp.route('/statistics', methods=['GET'])
 def statistics():
     cnx = get_db()
-
     cursor = cnx.cursor()
-
     query = "SELECT * FROM statistics"
-
     cursor.execute(query)
 
-    return render_template("statistics.html", title="Memory Cache Statistics", cursor=cursor)
+    start_time = datetime.now() - timedelta(minutes=10)
+    return render_template("statistics.html", title="Memory Cache Statistics", cursor=cursor, start_time=start_time)
 
 @webapp.route('/testpath', methods=['GET'])
 def testpath():

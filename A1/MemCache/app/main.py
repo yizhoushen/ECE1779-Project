@@ -3,16 +3,17 @@ import time
 from collections import OrderedDict
 from sys import getsizeof
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # database
 import mysql.connector
 from app.config import db_config
 
 # flask
-from MemCache.app import webapp_memcache
+from app import webapp_memcache
 from flask import jsonify, request
 from flask import json
+from flask import render_template
 
 SECONDS_WRITING_2DB_INTERVAL = 5
 
@@ -212,6 +213,12 @@ class PicMemCache(object):
                                    -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
                                    -1 if self.GetPicRequestNum == 0 else self.HitNum / self.GetPicRequestNum))
             cnx.commit()
+
+            # start_time = (datetime.now() - timedelta(seconds=600)).strftime("%y-%m-%d %H:%M:%S")
+            # query_delete =  ''' DELETE FROM statistics WHERE CurrTime < %s '''
+            # cursor.execute(query_delete, (start_time,))
+            # cnx.commit()
+
             time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
 
