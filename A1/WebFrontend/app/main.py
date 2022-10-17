@@ -83,7 +83,7 @@ def image_upload():
     cnx.commit()
 
     # Assume the current directory is .../ECE1779-Project
-    temp_path = os.path.join(os.path.abspath("./A1/WebFrontend/app"), dbimage_path)
+    temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), dbimage_path)
     save_path = temp_path.replace("\\", "/")
     new_image.save(save_path)
 
@@ -139,7 +139,7 @@ def image_display():
 
         image_path = row[0]
 
-        temp_path = os.path.join(os.path.abspath("./A1/WebFrontend/app"), image_path)
+        temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), image_path)
         read_path = temp_path.replace("\\", "/")
 
         with open(read_path, "rb") as image_file:

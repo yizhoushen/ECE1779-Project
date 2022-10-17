@@ -1,1 +1,1 @@
-python ./WebFronted/run.py & python ./MemCache/run.py
+python ./WebFrontend/run.py & python ./MemCache/run.py
