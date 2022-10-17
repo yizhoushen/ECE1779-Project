@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-
+<link rel = "stylesheet" href = "../static/css/mainstyle.css">
+    <div class = 'display_form'>
     <!-- <h1>Select Image Key</h1> -->
     <form action="{{url_for('image_display')}}"  enctype="multipart/form-data" method="post">
 
         What is the image files to display? <input type="text" name="image_key"><br />
 
         <input type="submit" value="Send">
-    </form>
+    </form></div>
 {% endblock %}

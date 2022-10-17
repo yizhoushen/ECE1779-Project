@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-
+<link rel = "stylesheet" href = "../static/css/mainstyle.css">
+    <div class ='image_display'>
     <!-- <h1>Image Display</h1> -->
     {% if image_path %}
         <div>Getting from local file system</div>
         <img src = '{{image_path}}' />
     {% elif encoded_string %}
         <div>Getting from memory cache</div>
-        <img src = 'data:;base64,{{encoded_string}}' />
+        <img src = 'data:;base64,{{encoded_string}}' /></div>
     {% endif %}
 
 {% endblock %}

@@ -1,0 +1,90 @@
+h1 {
+    text-align-last: center;
+    color: #999999;
+    font-size: 60px;
+    font-weight: bold;
+    }
+
+.list{
+    text-align: center;
+    list-style: inside;
+    color: #999999;
+    font-size: 20px;
+    font-weight: bold;
+
+}
+body{
+    background-image: url("cloudpic.jpg");
+    background-size: cover;
+    opacity: 1;
+}
+
+.old_main_form{
+    text-align: center;
+    color: #999999;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top:50px;
+}
+
+.api_test{
+    text-align: center;
+    color: #999999;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top:50px;
+}
+
+.base{
+    text-align: center;
+    color: #999999;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top:50px;
+
+}
+.config_form{
+    text-align: center;
+    color: #999999;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top:50px;
+}
+
+.image_display{
+    text-align: center;
+    color: #999999;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top:50px;
+}
+
+.keylist{
+
+    color: #999999;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top:50px;
+}
+
+.statistics{
+
+    color: #999999;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top:50px;
+}
+.upload_form{
+    text-align: center;
+    color: #999999;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top:50px;
+}
+.display_form{
+    text-align: center;
+    color: #999999;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top:50px;
+}

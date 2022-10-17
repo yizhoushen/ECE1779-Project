@@ -8,9 +8,11 @@
                 border-collapse: collapse;
             }
         </style> 
+        <link rel = "stylesheet" href = "../static/css/mainstyle.css">
     </head>
     <body>
         <h1>{{title}}</h1>
+        <div class = 'base'>
         <div style="padding: 0px 0px 4px 0px">
             <form action="{{url_for('main')}}" method='get'>
                 <input type='submit' value='Home'/ >
@@ -19,5 +21,6 @@
 
             {% block content %}
             {% endblock %}
+        </div>
     </body>
 </html>

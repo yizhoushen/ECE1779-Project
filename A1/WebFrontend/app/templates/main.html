@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <head>
     <title>Main Page</title>
+    <link rel = "stylesheet" href = "../static/css/mainstyle.css">
 </head>
 <html>
     <body>
         <h1>Home</h1>
+        <div class = 'list'>
         <ul>
             <li><a href="{{url_for('upload_form')}}">upload image</a></li>
             <li><a href="{{url_for('display_form')}}">show image</a></li>
@@ -12,5 +14,6 @@
             <li><a href="{{url_for('config_form')}}">configure mem-cache</a></li>
             <li><a href="{{url_for('statistics')}}">mem-cache statistics</a></li>
         </ul>
+        </div>
     <body>    
 </html>
