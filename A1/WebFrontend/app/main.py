@@ -10,6 +10,7 @@ import sys
 
 import tempfile
 import os
+import time
 
 import requests
 import base64
@@ -45,6 +46,7 @@ def upload_form():
 
 @webapp.route('/image_upload', methods=['POST'])
 def image_upload():
+    write_start = time.time()
     if 'uploaded_key' not in request.form:
         return "Missing image key"
     
@@ -84,6 +86,11 @@ def image_upload():
     temp_path = os.path.join(os.path.abspath("./A1/WebFrontend/app"), dbimage_path)
     save_path = temp_path.replace("\\", "/")
     new_image.save(save_path)
+
+    write_end = time.time()
+    duration = (write_end - write_start) * 1000
+    print("time used for writing: {}".format(duration))
+
     return "Success"
 
 
@@ -93,6 +100,7 @@ def display_form():
 
 @webapp.route('/image_display', methods=['POST'])
 def image_display():
+    read_start = time.time()
     if 'image_key' not in request.form:
         return "Need a image key"
 
@@ -110,6 +118,9 @@ def image_display():
     if res_json['success'] == 'True':
         # display encodeed image string from memcache
         encoded_string = res_json['content']
+        read_end = time.time()
+        duration = (read_end - read_start) * 1000
+        print("time used for reading from memcache: {}".format(duration))
         return render_template("image_display.html", title="Image Display", encoded_string=encoded_string)
     else:
         print("No Such image in memcache, getting from local file system...")
@@ -138,6 +149,9 @@ def image_display():
         response = requests.post("http://127.0.0.1:5001/put_kv", data=data, timeout=5)
         res_json = response.json()
         if res_json['success'] == 'True':
+            read_end = time.time()
+            duration = (read_end - read_start) * 1000
+            print("time used for reading from local file: {}".format(duration))
             return render_template("image_display.html", title="Image Display", image_path=image_path)
         else:
             return "Failed to get repsonse from memcache/put_kv"
