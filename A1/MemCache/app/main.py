@@ -17,6 +17,7 @@ from flask import render_template
 
 SECONDS_WRITING_2DB_INTERVAL = 5
 
+
 # database prepare & connect
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
@@ -24,6 +25,8 @@ def connect_to_database():
                                    host=db_config['host'],
                                    database=db_config['database'],
                                    auth_plugin='mysql_native_password')
+
+
 def get_db():
     db = connect_to_database()
     return db
@@ -45,8 +48,8 @@ class PicMemCache(object):
         cursor = cnx.cursor()
         clear_table_statistics = "truncate table statistics"
         cursor.execute(clear_table_statistics)
-        query = "SELECT Capacity FROM configuration WHERE id = 1"
-        cursor.execute(query)
+        sql_load_capacity = "SELECT Capacity FROM configuration WHERE id = 1"
+        cursor.execute(sql_load_capacity)
         # self.memCacheCapacity = memCacheCapacity
         self.memCacheCapacity = cursor.fetchone()[0]
 
@@ -69,7 +72,6 @@ class PicMemCache(object):
             self.currentMemCache -= getsizeof(self.MC[keyID])
             self.MC.pop(keyID)
             self.ItemNum -= 1
-            # self.write_statistics_2db()
         # 返回成功与否
 
     def drop_pic(self, approach=0):
@@ -91,21 +93,21 @@ class PicMemCache(object):
         print("put func: ", threading.current_thread().name)
         # 具体的图片写入memcache过程，不可首次调用
         if self.memCacheCapacity < getsizeof(picString):
-            print("memCache容量过小，甚至小于本张图片大小，请增大memCache，本次缓存失败")
-            return
+            # print("memCache容量过小，甚至小于本张图片大小，请增大memCache，本次缓存失败")
+            return "Cache failure! MemCache capacity is too small, even smaller than the image size, please increase the memCache capacity."
         elif self.currentMemCache + getsizeof(picString) <= self.memCacheCapacity:
             # 加入新图片后，没有超过MemCache总容量
             self.MC[keyID] = picString
             self.currentMemCache += getsizeof(picString)
             self.ItemNum += 1
-            # self.write_statistics_2db()
+            return "Caching success! Images go directly to cache."
         else:
             # 加入新图片后，超过了MemCache总容量：需要丢掉图片，存入新图片
 
             cnx = get_db()
             cursor = cnx.cursor()
-            query = "SELECT ReplacePolicy FROM configuration WHERE id = 1"
-            cursor.execute(query)
+            sql_load_replace_policy = "SELECT ReplacePolicy FROM configuration WHERE id = 1"
+            cursor.execute(sql_load_replace_policy)
             self.drop_approach = cursor.fetchone()[0]
             print("drop_approach: ", self.drop_approach)
 
@@ -114,8 +116,8 @@ class PicMemCache(object):
             self.MC[keyID] = picString
             self.currentMemCache += getsizeof(picString)
             self.ItemNum += 1
-            # self.write_statistics_2db()
-            print('Memcache set key {}'.format(keyID))
+            # print('Memcache set key {}'.format(keyID))
+            return "Caching success! Deleted the previous cached content."
 
     def get_pic(self, keyID):
         # 功能：1.需要看图时，加速；2.判断一张图片是否在memcache中
@@ -129,14 +131,11 @@ class PicMemCache(object):
             # 调用的图片就在MemCache
             self.MC.move_to_end(key=keyID, last=True)
             self.HitNum += 1
-            # self.write_statistics_2db()
-            # Returns the cache(string) of the image
             return self.MC[keyID]
         else:
             # 调用的图片不在MemCache
             self.MissNum += 1
             print("MemCache无此图片")
-            # self.write_statistics_2db()
             return None
 
     def clear_memcache(self):
@@ -150,25 +149,24 @@ class PicMemCache(object):
         self.MissNum = 0
         self.HitNum = 0
         self.GetPicRequestNum = 0
-        # self.write_statistics_2db()
 
     def refreshConfiguration(self):
         self.TotalRequestNum += 1
         cnx = get_db()
         cursor = cnx.cursor()
-        query = "SELECT Capacity,ReplacePolicy FROM configuration WHERE id = 1"
-        cursor.execute(query)
+        sql_reconfig = "SELECT Capacity,ReplacePolicy FROM configuration WHERE id = 1"
+        cursor.execute(sql_reconfig)
         result = cursor.fetchone()
         if not result:
-            print('数据库里没配置，拜拜')
+            # print('数据库里没配置，拜拜')
             return 'Database reconfiguration failed! Because there is no configuration in the database.'
         else:
             newMemCacheCapacity = result[0]
             newDropApproach = result[1]
 
-            if newMemCacheCapacity < 0 or newDropApproach not in [0,1]:
+            if newMemCacheCapacity < 0 or newDropApproach not in [0, 1]:
                 # 数据库合规性检查
-                print('数据库配置不合规范，拜拜')
+                # print('数据库配置不合规范，拜拜')
                 return 'Database reconfiguration failed! Because the data in the database is invalid.'
             self.drop_approach = newDropApproach
             print("drop_approach: ", self.drop_approach)
@@ -177,11 +175,6 @@ class PicMemCache(object):
                 self.drop_pic(self.drop_approach)
             self.memCacheCapacity = newMemCacheCapacity
             return 'Database reconfiguration successful!'
-
-    # def Front_end_upload(self, keyID):
-    #     # 用于前端上传时，若MemCache内有同KeyID图片，则drop。没有则无操作
-    #     if self.MC[keyID] != -1:
-    #         self.drop_specific_pic(keyID)
 
     def get_info(self):
         # for test
@@ -196,7 +189,7 @@ class PicMemCache(object):
 
             cnx = get_db()
             cursor = cnx.cursor()
-            query = ''' INSERT INTO statistics (CurrTime, 
+            query_write2db = ''' INSERT INTO statistics (CurrTime, 
                                                 ItemNum, 
                                                 CurrentMemCache, 
                                                 TotalRequestNum, 
@@ -205,13 +198,13 @@ class PicMemCache(object):
                                                 HitRate)
                         VALUES (%s,%s,%s,%s,%s, %s,%s)
                     '''
-            cursor.execute(query, (datetime.now().strftime("%y-%m-%d %H:%M:%S"),
-                                   self.ItemNum,
-                                   self.currentMemCache,
-                                   self.TotalRequestNum,
-                                   self.GetPicRequestNum,
-                                   -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
-                                   -1 if self.GetPicRequestNum == 0 else self.HitNum / self.GetPicRequestNum))
+            cursor.execute(query_write2db, (datetime.now().strftime("%y-%m-%d %H:%M:%S"),
+                                            self.ItemNum,
+                                            self.currentMemCache,
+                                            self.TotalRequestNum,
+                                            self.GetPicRequestNum,
+                                            -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
+                                            -1 if self.GetPicRequestNum == 0 else self.HitNum / self.GetPicRequestNum))
             cnx.commit()
 
             # start_time = (datetime.now() - timedelta(seconds=600)).strftime("%y-%m-%d %H:%M:%S")
@@ -245,9 +238,14 @@ def put_kv():
     key = request.form.get('key')
     value = request.form.get('value')
     # Fig 1.(5) PUT
-    memory1.put_pic(keyID=key, picString=value)
+    res_put = memory1.put_pic(keyID=key, picString=value)
     # Fig 1.(6) OK
-    response = jsonify(success='True')
+    if "success" in res_put:
+        response = jsonify(success='True',
+                           message=res_put)
+    else:
+        response = jsonify(success='False',
+                           message=res_put)
     return response
 
 
@@ -281,8 +279,8 @@ def clear():
 def invalidateKey():
     # 2个地方使用本函数：1.从memcache中，根据key删除特定图片；2.upload图片时，用于去掉重复keyID图片的memcache
     # Yizhou你上传图片时，调用就行，不用管是不是重复keyID啥的都不用管
-    # Fig 2.(2) invalidateKey
 
+    # Fig 2.(2) invalidateKey
     key = request.form.get('key')
     memory1.drop_specific_pic(keyID=key)
     # Fig 2.(3) OK
@@ -311,6 +309,6 @@ def refreshConfiguration():
 #     return response
 
 
-@webapp_memcache.route('/',methods=['GET'])
+@webapp_memcache.route('/', methods=['GET'])
 def main():
     return render_template("memcache_view.html", memory1=memory1)
