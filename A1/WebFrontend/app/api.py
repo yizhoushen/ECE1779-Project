@@ -71,7 +71,7 @@ def upload_api():
     cursor.execute(query_overwrite, (new_key, dbimage_path))
     cnx.commit()
 
-    temp_path = os.path.join(os.path.abspath("./A1/WebFrontend/app"), dbimage_path)
+    temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), dbimage_path)
     save_path = temp_path.replace("\\", "/")
     new_image.save(save_path)
     
@@ -125,7 +125,7 @@ def get_key_api(key_value):
 
         image_path = row[0]
 
-        temp_path = os.path.join(os.path.abspath("./A1/WebFrontend/app"), image_path)
+        temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), image_path)
         read_path = temp_path.replace("\\", "/")
 
         with open(read_path, "rb") as image_file:
