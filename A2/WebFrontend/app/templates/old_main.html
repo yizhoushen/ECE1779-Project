@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<head>
+    <title>Very simple memcache</title>
+    <!-- <link rel = "stylesheet" href = "../static/css/mainstyle.css"> -->
+</head>
+<html>
+    <body>
+        <div class ='old_main_form'>
+        <form action="{{ url_for('get')}}" method="post">
+            <label>key:</label>
+            <input type="text" name="key" />
+            <input type="submit" value="get" />
+        </form>
+
+        <form action="{{ url_for('put')}}" method="post">
+            <label>key:</label>
+            <input type="text" name="key" />
+            <label>value:</label>
+            <input type="text" name="value" />
+            <input type="submit" value="put" />
+        </form></div>
+
+
+    <body>    
+</html>

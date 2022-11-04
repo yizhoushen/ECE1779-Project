@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<head>
+    <title>Very simple memcache</title>
+    <!-- <link rel = "stylesheet" href = "../static/css/mainstyle.css"> -->
+</head>
+<html>
+    <body>
+        <div class ='api_test'>
+        <form action="{{ url_for('upload_api')}}" enctype="multipart/form-data" method="post">
+            <label>key:</label> <input type="text" name="key" />
+            <label>file:</label> <input type="file" name="file" />
+            <input type="submit" value="upload" />
+        </form>
+
+        <form action="{{ url_for('list_keys_api')}}" enctype="multipart/form-data" method="post">
+            <label>List all keys:</label>
+            <input type="submit" value="list" />
+        </form>
+
+        <form action="{{ url_for('get_key_api', key_value = 'ds2')}}" enctype="multipart/form-data" method="post">
+            <label>Get image for specific key</label>
+            <input type="submit" value="get" />
+        </form></div>
+
+    <body>    
+</html>

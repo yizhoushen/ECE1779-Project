@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<head>
+    <title>MemCache View</title>
+</head>
+<html>
+    <body>
+
+        <table> 
+        <thead> 
+            <th>Capacity</th>
+            <th>Replacement Policy</th>
+            <th>Occupation</th>
+            <th>Item Num</th>
+            <th>Total Requests</th>
+            <th>Miss Num</th>
+            <th>Hit Num</th>
+            <th>GetPic Requests</th>
+           
+        </thead> 
+            <td>{{ memory1.memCacheCapacity}}</td>
+            <td>{{ memory1.drop_approach}}</td>
+            <td>{{ memory1.currentMemCache}}</td>
+            <td>{{ memory1.ItemNum}}</td>
+            <td>{{ memory1.TotalRequestNum}}</td>
+            <td>{{ memory1.MissNum}}</td>
+            <td>{{ memory1.HitNum}}</td>
+            <td>{{ memory1.GetPicRequestNum}}</td>
+        </table>
+
+        <table>
+            <thead>
+                <th>KeyID</th>
+                <th>ImageString</th>
+            </thead>
+            {% for key, value in memory1.MC.items() %}
+                <tr>
+                    <td>{{ key }}</td>
+                    <td>{{ value }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+
+    <body>    
+</html>

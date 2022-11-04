@@ -1,0 +1,12 @@
+<!-- <link rel = "stylesheet" href = "../static/css/mainstyle.css">
+<div class ='upload_form'> -->
+{% extends "base.html" %}
+{% block content %}
+    <!-- <h1>Select Image Key</h1> -->
+    <form action="{{url_for('image_upload')}}"  enctype="multipart/form-data" method="post">
+
+        What is the image key and image file to upload? <input type="text", name="uploaded_key"> <input type="file" name="uploaded_image"><br />
+
+        <input type="submit" value="Send">
+    </form>
+{% endblock %}
