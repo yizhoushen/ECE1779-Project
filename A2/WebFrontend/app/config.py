@@ -1,11 +1,11 @@
-db_config = {'user': 'dbadmin',
+# config of A2 RDS database
+# this database instance enables public access for local connection testing, remember to replace with a new S3 database instance without public access
+db_config = {'user': 'admin',
              'password': 'admin1234',
-             'host': '127.0.0.1',
+             'host': 'database-test.cbb4fukguxcp.us-east-1.rds.amazonaws.com',
              'database': 'ece1779project'}
 
-# config of aws ec2
+aws_access = {'aws_access_key_id': '<do not upload access key to github, change to your own>',
+              'aws_secret_access_key': '<do not upload access key to github, change to your own>'}
 
-# db_config = {'user': 'root',
-#              'password': 'ece1779pass',
-#              'host': '127.0.0.1',
-#              'database': 'ece1779aws'}
+s3_bucket = {'name': 'bucket-ece1779-project'}

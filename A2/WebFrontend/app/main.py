@@ -5,7 +5,7 @@ from flask import json
 from datetime import datetime, timedelta
 
 import mysql.connector
-from app.config import db_config
+from app.config import db_config, aws_access, s3_bucket
 import sys
 
 import tempfile
@@ -15,7 +15,13 @@ import time
 import requests
 import base64
 
+import boto3
+
 # os.chdir(os.path.abspath("./A1/WebFrontend"))
+
+s3 = boto3.client('s3',
+                  aws_access_key_id=aws_access['aws_access_key_id'],
+                  aws_secret_access_key=aws_access['aws_secret_access_key'])
 
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
@@ -35,6 +41,7 @@ def teardown_db(exception):
     if db is not None:
         db.close()
 
+
 @webapp.route('/',methods=['GET'])
 @webapp.route('/main',methods=['GET'])
 def main():
@@ -49,7 +56,6 @@ def image_upload():
     write_start = time.time()
     if 'uploaded_key' not in request.form:
         return "Missing image key"
-    
     if 'uploaded_image' not in request.files:
         return "Missing uploaded image"
     
@@ -66,26 +72,26 @@ def image_upload():
     response = requests.post("http://127.0.0.1:5001/invalidateKey", data=data, timeout=5)
     print(response.text)
     
-    # path saved in database is ./static/images/<new_key>.<file_extension>
+    # Save key and path to database
     s = new_image.filename.split(".")
     file_extension = s[len(s)-1]
-    temp_path = os.path.join("./static/images", "{}.{}".format(new_key, file_extension))
-    dbimage_path = temp_path.replace("\\", "/")
+    # temp_path = os.path.join("./static/images", "{}.{}".format(new_key, file_extension))
+    # dbimage_path = temp_path.replace("\\", "/")
+    dbimage_path = "{}.{}".format(new_key, file_extension)
 
     cnx = get_db()
     cursor = cnx.cursor()
-
     query_overwrite = '''   INSERT INTO imagelist(ImageID, ImagePath)
                             VALUES(%s, %s) as newimage
                             ON DUPLICATE KEY UPDATE ImagePath=newimage.ImagePath'''
-
     cursor.execute(query_overwrite, (new_key, dbimage_path))
     cnx.commit()
 
-    # Assume the current directory is .../ECE1779-Project
-    temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), dbimage_path)
-    save_path = temp_path.replace("\\", "/")
-    new_image.save(save_path)
+    # Save file to S3
+    # temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), dbimage_path)
+    # save_path = temp_path.replace("\\", "/")
+    # new_image.save(save_path)
+    s3.upload_fileobj(new_image, s3_bucket['name'], dbimage_path)
 
     write_end = time.time()
     duration = (write_end - write_start) * 1000
@@ -121,16 +127,15 @@ def image_display():
         read_end = time.time()
         duration = (read_end - read_start) * 1000
         print("time used for reading from memcache: {}".format(duration))
+        print("Getting from memory cache: \n {}".format(encoded_string[:10]))
         return render_template("image_display.html", title="Image Display", encoded_string=encoded_string)
     else:
         print("No Such image in memcache, getting from local file system...")
 
         cnx = get_db()
         cursor = cnx.cursor()
-
         query = ''' SELECT ImagePath FROM imagelist
                     WHERE ImageID = %s'''
-
         cursor.execute(query, (image_key,))
         row = cursor.fetchone()
         
@@ -139,12 +144,17 @@ def image_display():
 
         image_path = row[0]
 
-        temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), image_path)
-        read_path = temp_path.replace("\\", "/")
-
-        with open(read_path, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read())
+        # temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), image_path)
+        # read_path = temp_path.replace("\\", "/")
+        # with open(read_path, "rb") as image_file:
+        #     encoded_string = base64.b64encode(image_file.read())
         
+        # bucket = s3.Bucket(s3_bucket['name'])
+        image_file = s3.get_object(Bucket=s3_bucket['name'], Key=image_path)['Body'].read()
+        encoded_string = base64.b64encode(image_file).decode('utf-8')
+        print("Getting from local file system: \n {}".format(encoded_string[:10]))
+        
+        # save image to memcache
         data = {'key': image_key, 'value': encoded_string}
         response = requests.post("http://127.0.0.1:5001/put_kv", data=data, timeout=5)
         res_json = response.json()
@@ -152,7 +162,7 @@ def image_display():
             read_end = time.time()
             duration = (read_end - read_start) * 1000
             print("time used for reading from local file: {}".format(duration))
-            return render_template("image_display.html", title="Image Display", image_path=image_path)
+            return render_template("image_display.html", title="Image Display", encoded_string=encoded_string, local_file=True)
         else:
             return "Failed to get repsonse from memcache/put_kv"
 
@@ -161,13 +171,9 @@ def image_display():
 @webapp.route('/all_keys', methods=['GET'])
 def all_keys():
     cnx = get_db()
-
     cursor = cnx.cursor()
-
     query = "SELECT * FROM imagelist"
-
     cursor.execute(query)
-
     return render_template("keylist.html", title="ImageID List", cursor=cursor)
 
 
