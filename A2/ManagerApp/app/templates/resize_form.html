@@ -1,0 +1,24 @@
+<!-- <div class ='config_form'></div> -->
+{% extends "base.html" %}
+{% block content %}
+
+    <p>Current MemCache Node Number: </p>
+    <p id="node_count">{{curr_memcache_node_count}}</p>
+    <button onclick="server.increment()">Increment</button>
+    <button onclick="server.decrement()">Decrement</button>
+
+    <form action="{{url_for('resize_mem_cache')}}"  method="post">
+        <input type="submit" name="manual_mode"  value="Manual Mode">
+    </form>
+
+    <form action="{{url_for('resize_mem_cache')}}"  method="post">
+
+        Max Miss Rate threshold:  <input type="text", name="max_missrate"><br />
+        Min Miss Rate threshold: <input type="text" name="min_missrate"><br />
+        Ratio by which to expand the pool: <input type="text" name="ratio_expand"><br />
+        Ratio by which to shrink the pool: <input type="text" name="ratio_shrink"><br />
+
+        <input type="submit" name="auto_mode"  value="Auto Mode">
+    </form>
+
+{% endblock %}

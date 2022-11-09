@@ -4,7 +4,13 @@
 </head>
 <html>
     <body>
-        <h1>Test Heading for Manager App</h1>
-        <p>Delete it later</p>
+        <h1>Home</h1>
+        <div class = 'list'>
+        <ul>
+            <li><a href="{{url_for('statistics')}}">memcache statistics</a></li>
+            <li><a href="{{url_for('config_form')}}">configure memcache</a></li>
+            <li><a href="{{url_for('resize_form')}}">configure resize mode</a></li>
+        </ul>
+        </div>
     <body>    
 </html>

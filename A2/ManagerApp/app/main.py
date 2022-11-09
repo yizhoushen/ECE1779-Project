@@ -1,11 +1,12 @@
-from flask import render_template, url_for, request
+from flask import render_template, url_for, request, g
 from app import webapp_manager
 from flask import json
 from flask import jsonify
 import requests
 import mysql.connector
 from app.config import db_config
-
+from datetime import datetime, timedelta
+import jyserver.Flask as jsf
 
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
@@ -30,6 +31,37 @@ def teardown_db(exception):
 def main():
     return render_template("main.html")
 
+# change count
+curr_memcache_node_count = 1
+global new_memcache_node_count
+
+@jsf.use(webapp_manager)
+class App:
+    def __init__(self) -> None:
+        self.count = curr_memcache_node_count
+    
+    def increment(self):
+        self.count += 1
+        self.js.document.getElementById('node_count').innerHTML = self.count
+        global new_memcache_node_count
+        new_memcache_node_count = self.count
+    
+    def decrement(self):
+        self.count -= 1
+        self.js.document.getElementById('node_count').innerHTML = self.count
+        global new_memcache_node_count
+        new_memcache_node_count = self.count
+
+
+@webapp_manager.route('/statistics', methods=['GET'])
+def statistics():
+    cnx = get_db()
+    cursor = cnx.cursor()
+    query = "SELECT * FROM statistics"
+    cursor.execute(query)
+
+    start_time = datetime.now() - timedelta(minutes=10)
+    return render_template("statistics.html", title="Memory Cache Statistics", cursor=cursor, start_time=start_time)
 
 @webapp_manager.route('/config_form', methods=['GET'])
 def config_form():
@@ -86,13 +118,19 @@ def config_mem_cache():
         return "Invalid! Please choose cache configure or cache clear"
 
 
-# @webapp_manager.route('/statistics', methods=['GET'])
-# def statistics():
-#     cnx = get_db()
-#     cursor = cnx.cursor()
-#     query = "SELECT * FROM statistics"
-#     cursor.execute(query)
+@webapp_manager.route('/resize_form', methods=['GET'])
+def resize_form():
+    return App.render(render_template("resize_form.html", title="Change Memory Cache Resize Mode", curr_memcache_node_count=curr_memcache_node_count))
 
-#     start_time = datetime.now() - timedelta(minutes=10)
-#     return render_template("statistics.html", title="Memory Cache Statistics", cursor=cursor, start_time=start_time)
-
+@webapp_manager.route('/resize_mem_cache', methods=['POST'])
+def resize_mem_cache():
+    if 'manual_mode' not in request.form and 'auto_mode' in request.form:
+        # todo
+        return "1"
+    elif 'manual_mode' in request.form and 'auto_mode' not in request.form:
+        # todo
+        global curr_memcache_node_count
+        curr_memcache_node_count = new_memcache_node_count
+        return "new_memcache_node_count: {}".format(new_memcache_node_count)
+    else:
+        return "Invalid! Please choose manual mode or auto mode"

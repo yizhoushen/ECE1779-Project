@@ -16,6 +16,7 @@ import requests
 import base64
 
 import boto3
+import hashlib
 
 # os.chdir(os.path.abspath("./A1/WebFrontend"))
 
@@ -67,7 +68,14 @@ def image_upload():
     if new_image.filename == '':
         return 'Missing file name'
     
+    # get md5 hash
+    new_key_md5 = hashlib.md5(new_key.encode())
+    partition = new_key_md5.hexdigest()[0]
+
     # invilidate memcache
+
+    # todo: route request to memcache node based on partition
+
     data = {'key': new_key}
     response = requests.post("http://127.0.0.1:5001/invalidateKey", data=data, timeout=5)
     print(response.text)
