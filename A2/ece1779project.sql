@@ -42,6 +42,22 @@ create table statistics
     CurrTime         datetime      null
 );
 
+create table memcachelist
+(
+memcacheID int NOT NULL,
+activeStatus boolean NOT NULL,
+PRIMARY KEY(memcacheID)
+);
+
+INSERT INTO memcachelist VALUES(5001, false);
+INSERT INTO memcachelist VALUES(5004, false);
+INSERT INTO memcachelist VALUES(5005, false);
+INSERT INTO memcachelist VALUES(5006, false);
+INSERT INTO memcachelist VALUES(5007, false);
+INSERT INTO memcachelist VALUES(5008, false);
+INSERT INTO memcachelist VALUES(5009, false);
+INSERT INTO memcachelist VALUES(5010, false);
+
 -- INSERT INTO statistics
 -- VALUES(
 -- 1,
@@ -57,6 +73,7 @@ create table statistics
 -- select * from imagelist;
 -- select * from configuration;
 -- select * from statistics;
+-- select * from memcachelist;
 
 -- DELETE FROM imagelist WHERE ImageID = 'ds1';
 
