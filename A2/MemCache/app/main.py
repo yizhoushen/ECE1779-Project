@@ -15,7 +15,7 @@ from flask import jsonify, request
 from flask import json
 from flask import render_template
 
-SECONDS_WRITING_2DB_INTERVAL = 5
+SECONDS_WRITING_2DB_INTERVAL = 60 * 60
 
 
 # database prepare & connect
