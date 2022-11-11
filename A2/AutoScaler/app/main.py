@@ -5,7 +5,7 @@ from flask import jsonify
 import math
 import mysql.connector
 
-AUTO_SCALER_ENABLE = False
+AUTO_SCALER_ENABLE = True
 
 MAX_MISS_RATE_THRESHOLD = 0
 MIN_MISS_RATE_THRESHOLD = 0
@@ -27,7 +27,6 @@ def connect_to_database():
                                    host=db_config['host'],
                                    database=db_config['database'],
                                    auth_plugin='mysql_native_password')
-
 
 def get_db():
     db = connect_to_database()
@@ -77,9 +76,6 @@ def operate_instances(delta_of_instances = 0):
 def auto_bu_qidong():
     # 等待信号变更为auto模式，重置标志位，启动
 
-def get_autoscaler_status():
-    return AUTO_SCALER_ENABLE
-
 @webapp_autoscaler.route('/')
 def main():
     # 默认autoscaler启动，AUTO_SCALER_ENABLE为True
@@ -93,3 +89,30 @@ def main():
     return render_template("main.html")
 
 
+@webapp_memcache.route('/set_autoscaler_mode', methods=['POST'])
+def set_autoscaler_mode():
+    new_autoscaler_mode = request.form.get('autoscaler_mode')
+    if new_autoscaler_mode != AUTO_SCALER_ENABLE:
+        if new_autoscaler_mode == 1:
+            AUTO_SCALER_ENABLE = True
+            response = jsonify(success='True',
+                               message='Success! The mode of autoscaler is on.')
+        elif new_autoscaler_mode == 0:
+            AUTO_SCALER_ENABLE = False
+            response = jsonify(success='True',
+                               message='Success! The mode of autoscaler is off.')
+        else:
+            response = jsonify(success='False',
+                               message='Failure! Illegal parameters, the mode of autoscaler unchanged.')
+    return response
+
+
+@webapp_memcache.route('/get_curr_autoscaler_mode', methods=['POST'])
+def get_curr_autoscaler_mode():
+    if AUTO_SCALER_ENABLE:
+        response = jsonify(success='True',
+                           message='The mode of autoscaler is on.')
+    else:
+        response = jsonify(success='True',
+                           message='The mode of autoscaler is off.')
+    return response
