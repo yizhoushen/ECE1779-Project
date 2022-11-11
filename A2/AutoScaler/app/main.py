@@ -3,6 +3,7 @@ from app import webapp_autoscaler
 from flask import json
 from flask import jsonify
 import math
+import mysql.connector
 
 AUTO_SCALER_ENABLE = False
 
@@ -12,47 +13,64 @@ MIN_MISS_RATE_THRESHOLD = 0
 expand_ratio = 2
 shrink_ratio = 0.5
 
+# 需要前端进行合规性检查
 MAX_NUM_OF_INSTANCES = 8
 MIN_NUM_OF_INSTANCES = 1
 
 # come from cloudwatch
 miss_rate = 0
 
+# database prepare & connect
+def connect_to_database():
+    return mysql.connector.connect(user=db_config['user'],
+                                   password=db_config['password'],
+                                   host=db_config['host'],
+                                   database=db_config['database'],
+                                   auth_plugin='mysql_native_password')
+
+
+def get_db():
+    db = connect_to_database()
+    return db
+
 
 def get_instance_change(miss_rate):
     # delta_of_instance: positive = num to be added； negative = num to be reduced ; 0 means no change
-    delta_of_instance = 0
+    delta_of_instances = 0
 
-    # get most updated num_of_instance, old_num_of_instance
-    # can only come from db
-    num_of_instance = 0
-    old_num_of_instance = 0
+    # get most updated num_of_instances, old_num_of_instance
+    cnx = get_db()
+    cursor = cnx.cursor()
+    sql_num_of_activate_instances = "SELECT COUNT(*) FROM memcachelist WHERE activeStatus = TRUE"
+    cursor.execute(sql_num_of_activate_instances)
+    num_of_instances = cursor.fetchone()[0]
+    old_num_of_instances = cursor.fetchone()[0]
 
     # expand
     if miss_rate > MAX_MISS_RATE_THRESHOLD:
         # expand instances based on expand_ratio
-        num_of_instance *= expand_ratio
-        num_of_instance = math.ceil(num_of_instance)
-        if num_of_instance > MAX_NUM_OF_INSTANCES:
-            num_of_instance = MAX_NUM_OF_INSTANCES
+        num_of_instances *= expand_ratio
+        num_of_instances = math.ceil(num_of_instances)
+        if num_of_instances > MAX_NUM_OF_INSTANCES:
+            num_of_instances = MAX_NUM_OF_INSTANCES
 
     # shrink
     if miss_rate < MIN_MISS_RATE_THRESHOLD:
         # shrink instances based on shrink_ratio
-        num_of_instance *= shrink_ratio
-        num_of_instance = math.ceil(num_of_instance)
-        if num_of_instance < MIN_NUM_OF_INSTANCES:
-            num_of_instance = MIN_NUM_OF_INSTANCES
+        num_of_instances *= shrink_ratio
+        num_of_instances = math.ceil(num_of_instances)
+        if num_of_instances < MIN_NUM_OF_INSTANCES:
+            num_of_instances = MIN_NUM_OF_INSTANCES
 
-    delta_of_instance = int(num_of_instance - old_num_of_instance)
-    return delta_of_instance
+    delta_of_instance = int(num_of_instances - old_num_of_instances)
+    return delta_of_instances
 
 
-def operate_instances(delta_of_instance = 0):
-    if delta_of_instance > 0:
-        print("Need to add " + str(delta_of_instance) + " new instances automatically!")
-    elif delta_of_instance < 0:
-        print("Need to shrink " + str(abs(delta_of_instance)) + "instances automatically!")
+def operate_instances(delta_of_instances = 0):
+    if delta_of_instances > 0:
+        print("Need to expand " + str(delta_of_instances) + " new instances automatically!")
+    elif delta_of_instances < 0:
+        print("Need to shrink " + str(abs(delta_of_instances)) + "instances automatically!")
     else:
         print("Don't need to adjust instances!")
 
