@@ -2,9 +2,16 @@ from flask import render_template, url_for, request
 from app import webapp_autoscaler
 from flask import json
 from flask import jsonify
-import math
+
 import mysql.connector
 
+import math
+from datetime import datetime, timedelta
+
+MAX_NUM_OF_INSTANCES = 8
+MIN_NUM_OF_INSTANCES = 1
+
+# Autoscaler Status Variables
 AUTO_SCALER_ENABLE = True
 
 MAX_MISS_RATE_THRESHOLD = 0
@@ -12,9 +19,6 @@ MIN_MISS_RATE_THRESHOLD = 0
 
 expand_ratio = 2
 shrink_ratio = 0.5
-
-MAX_NUM_OF_INSTANCES = 8
-MIN_NUM_OF_INSTANCES = 1
 
 # come from cloudwatch
 miss_rate = 0
@@ -66,6 +70,7 @@ def get_instance_change(miss_rate):
 
 def operate_instances(delta_of_instances = 0):
     if delta_of_instances > 0:
+        # maybe one way: while until delta_of_instances == 0
         print("Need to expand " + str(delta_of_instances) + " new instances automatically!")
     elif delta_of_instances < 0:
         print("Need to shrink " + str(abs(delta_of_instances)) + "instances automatically!")
@@ -163,4 +168,17 @@ def get_curr_autoscaler_mode():
                            message='The mode of autoscaler is off.')
     return response
 
-# 获取当前状态函数
+@webapp_memcache.route('/get_curr_autoscaler_status', methods=['POST'])
+def get_curr_autoscaler_status():
+    curr_autoscaler_status = {'Mode': AUTO_SCALER_ENABLE,
+                              'Max Miss Rate threshold': MAX_MISS_RATE_THRESHOLD,
+                              'Min Miss Rate threshold': MIN_MISS_RATE_THRESHOLD,
+                              'Expand Ratio': expand_ratio,
+                              'Shrink Ratio': shrink_ratio,
+                              'Time': datetime.now().strftime("%y-%m-%d %H:%M:%S")
+                              }
+    # 潜在问题：这里应该怎么发？
+    response = jsonify(success='True',
+                       message=curr_autoscaler_status)
+
+
