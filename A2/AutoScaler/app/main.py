@@ -69,6 +69,7 @@ def get_instance_change(miss_rate):
 
 
 def operate_instances(delta_of_instances = 0):
+    # to be done
     if delta_of_instances > 0:
         # maybe one way: while until delta_of_instances == 0
         print("Need to expand " + str(delta_of_instances) + " new instances automatically!")
@@ -78,6 +79,7 @@ def operate_instances(delta_of_instances = 0):
         print("Don't need to adjust instances!")
 
 def autoscaler_mode_change():
+    # to be down
     # 不能用while，占用线程
     while(AUTO_SCALER_ENABLE):
         # listen miss rate
@@ -87,6 +89,7 @@ def autoscaler_mode_change():
 
 @webapp_autoscaler.route('/')
 def main():
+    # to be done
     # 默认autoscaler启动，AUTO_SCALER_ENABLE为True
     # 1.等待来自前端的信号
     #     1.1 若传来手动信号，则启动autoscaler功能函数
@@ -141,21 +144,6 @@ def set_ratio():
             shrink_ratio = ratio_num
             response = jsonify(success='True',
                                message='Success! The shrink_ratio has changed to ' + str(shrink_ratio))
-
-
-
-        AUTO_SCALER_ENABLE = True
-        autoscaler_mode_change()
-        response = jsonify(success='True',
-                           message='Success! The mode of autoscaler is on.')
-    elif new_autoscaler_mode == 0:
-        AUTO_SCALER_ENABLE = False
-        autoscaler_mode_change()
-        response = jsonify(success='True',
-                           message='Success! The mode of autoscaler is off.')
-    else:
-        response = jsonify(success='False',
-                           message='Failure! Illegal parameters, the mode of autoscaler unchanged.')
     return response
 
 @webapp_memcache.route('/get_curr_autoscaler_mode', methods=['POST'])
@@ -180,5 +168,6 @@ def get_curr_autoscaler_status():
     # 潜在问题：这里应该怎么发？
     response = jsonify(success='True',
                        message=curr_autoscaler_status)
+    return response
 
 
