@@ -7,13 +7,17 @@ import mysql.connector
 
 import math
 from datetime import datetime
+
 from app.config import db_config
+
+import threading
+
 
 MAX_NUM_OF_INSTANCES = 8
 MIN_NUM_OF_INSTANCES = 1
 
 # Autoscaler Status Variables
-AUTO_SCALER_ENABLE = True
+AUTO_SCALER_ENABLE = False
 
 MAX_MISS_RATE_THRESHOLD = 0
 MIN_MISS_RATE_THRESHOLD = 0
@@ -85,11 +89,23 @@ def operate_instances(delta_of_instances=0):
 def autoscaler_mode_change():
     # to be down
     # 不能用while，占用线程
+    if AUTO_SCALER_ENABLE:
+        # while 打头
+        # step 1： 每分钟获取miss rate
+        # step 2： 调整scale
+        # step 3： 等待1min
+        # 把上面的封装成1个函数，用线程
+    else:
+        # 关闭上面auto线程
+        # check 标志位（被动）
+
     while AUTO_SCALER_ENABLE:
         # listen miss rate
         delta_of_instances = get_instance_change(miss_rate)
         operate_instances(delta_of_instances)
     # check AUTO_SCALER_ENABLE变化
+
+    # 线程持续启动，靠里面的标志位决定
 
 
 @webapp_autoscaler.route('/')
@@ -139,7 +155,7 @@ def set_ratio():
         response = jsonify(success='False',
                            message='Failure! The ratio_type is illegal.')
     elif ratio_type == "expand":
-        if ratio_num <= 1:
+        if ratio_num <= 1.0:
             response = jsonify(success='False',
                                message='Failure! The ratio_num is illegal.')
         else:
@@ -147,7 +163,7 @@ def set_ratio():
             response = jsonify(success='True',
                                message='Success! The expand_ratio has changed to ' + str(expand_ratio))
     elif ratio_type == "shrink":
-        if ratio_num <= 0 or ratio_num >= 1:
+        if ratio_num <= 0.0 or ratio_num >= 1.0:
             response = jsonify(success='False',
                                message='Failure! The ratio_num is illegal.')
         else:
