@@ -4,14 +4,14 @@ from flask import json
 from flask import jsonify
 import requests
 import mysql.connector
-from app.config import db_config, aws_access, s3_bucket
+from app.config import db_config, ami_id, subnet_id, s3_bucket
 from datetime import datetime, timedelta
 import jyserver.Flask as jsf
 import boto3
 
-s3 = boto3.resource('s3',
-                  aws_access_key_id=aws_access['aws_access_key_id'],
-                  aws_secret_access_key=aws_access['aws_secret_access_key'])
+# s3 = boto3.resource('s3',
+#                   aws_access_key_id=aws_access['aws_access_key_id'],
+#                   aws_secret_access_key=aws_access['aws_secret_access_key'])
 
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
@@ -235,6 +235,7 @@ def delet_all_data():
     cursor.execute(query)
     cnx.commit()
     # delet all images in S3
+    s3 = boto3.resource('s3')
     bucket = s3.Bucket(s3_bucket['name'])
     bucket.objects.all().delete()
     # clear contents in all memcache nodes

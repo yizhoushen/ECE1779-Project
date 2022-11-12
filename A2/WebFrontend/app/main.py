@@ -1,11 +1,11 @@
 
 from flask import render_template, url_for, request, g
-from app import webapp, memcache
+from app import webapp
 from flask import json
 from datetime import datetime, timedelta
 
 import mysql.connector
-from app.config import db_config, aws_access, s3_bucket
+from app.config import db_config, ami_id, subnet_id, s3_bucket
 import sys
 
 import tempfile
@@ -20,9 +20,10 @@ import hashlib
 
 # os.chdir(os.path.abspath("./A1/WebFrontend"))
 
-s3 = boto3.client('s3',
-                  aws_access_key_id=aws_access['aws_access_key_id'],
-                  aws_secret_access_key=aws_access['aws_secret_access_key'])
+# s3 = boto3.client('s3',
+#                   aws_access_key_id=aws_access['aws_access_key_id'],
+#                   aws_secret_access_key=aws_access['aws_secret_access_key'])
+
 
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
@@ -96,9 +97,7 @@ def image_upload():
     cnx.commit()
 
     # Save file to S3
-    # temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), dbimage_path)
-    # save_path = temp_path.replace("\\", "/")
-    # new_image.save(save_path)
+    s3 = boto3.client('s3')
     s3.upload_fileobj(new_image, s3_bucket['name'], dbimage_path)
 
     write_end = time.time()
@@ -151,13 +150,9 @@ def image_display():
             return "No such image"
 
         image_path = row[0]
-
-        # temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), image_path)
-        # read_path = temp_path.replace("\\", "/")
-        # with open(read_path, "rb") as image_file:
-        #     encoded_string = base64.b64encode(image_file.read())
         
         # bucket = s3.Bucket(s3_bucket['name'])
+        s3 = boto3.client('s3')
         image_file = s3.get_object(Bucket=s3_bucket['name'], Key=image_path)['Body'].read()
         encoded_string = base64.b64encode(image_file).decode('utf-8')
         print("Getting from local file system: \n {}".format(encoded_string[:10]))
