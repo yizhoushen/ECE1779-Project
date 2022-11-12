@@ -109,16 +109,17 @@ def main():
 
 
 @webapp_autoscaler.route('/set_autoscaler_mode', methods=['POST'])
+# has been tested successfully at Nov. 11
 def set_autoscaler_mode():
-    new_autoscaler_mode = request.form.get('autoscaler_mode')
-    if new_autoscaler_mode == 1:
+    new_autoscaler_mode = float(request.form.get('autoscaler_mode'))
+    if new_autoscaler_mode == 1.0:
         AUTO_SCALER_ENABLE = True
-        autoscaler_mode_change()
+        # autoscaler_mode_change()
         response = jsonify(success='True',
                            message='Success! The mode of autoscaler is on.')
-    elif new_autoscaler_mode == 0:
+    elif new_autoscaler_mode == 0.0:
         AUTO_SCALER_ENABLE = False
-        autoscaler_mode_change()
+        # autoscaler_mode_change()
         response = jsonify(success='True',
                            message='Success! The mode of autoscaler is off.')
     else:
@@ -128,6 +129,7 @@ def set_autoscaler_mode():
 
 
 @webapp_autoscaler.route('/set_ratio', methods=['POST'])
+# has been tested successfully at Nov. 11
 def set_ratio():
     ratio_type = request.form.get('ratio_type')
     ratio_num = float(request.form.get('ratio_num'))
@@ -155,14 +157,14 @@ def set_ratio():
 
 
 @webapp_autoscaler.route('/get_curr_autoscaler_status', methods=['POST'])
+# has been tested successfully at Nov. 11
 def get_curr_autoscaler_status():
     curr_autoscaler_status = {'Auto Mode': AUTO_SCALER_ENABLE,
-                              'Max Miss Rate threshold': MAX_MISS_RATE_THRESHOLD,
-                              'Min Miss Rate threshold': MIN_MISS_RATE_THRESHOLD,
+                              'Max Miss Rate Threshold': MAX_MISS_RATE_THRESHOLD,
+                              'Min Miss Rate Threshold': MIN_MISS_RATE_THRESHOLD,
                               'Expand Ratio': expand_ratio,
                               'Shrink Ratio': shrink_ratio,
                               'Time': datetime.now().strftime("%y-%m-%d %H:%M:%S")
                               }
-    response = jsonify(success='True',
-                       message=curr_autoscaler_status)
+    response = jsonify(message=curr_autoscaler_status)
     return response
