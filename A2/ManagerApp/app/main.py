@@ -41,13 +41,16 @@ class App:
         self.count = curr_memcache_node_count
     
     def increment(self):
-        self.count += 1
+        if self.count < 8:
+            self.count += 1
         self.js.document.getElementById('node_count').innerHTML = self.count
         global new_memcache_node_count
         new_memcache_node_count = self.count
+        
     
     def decrement(self):
-        self.count -= 1
+        if self.count > 1:
+            self.count -= 1
         self.js.document.getElementById('node_count').innerHTML = self.count
         global new_memcache_node_count
         new_memcache_node_count = self.count
@@ -72,7 +75,6 @@ def config_mem_cache():
     if 'cache_clear' not in request.form and 'cache_configure' in request.form:
         if 'memcache_size' not in request.form:
             return "Missing MemCache size"
-        
         if 'memcache_policy' not in request.form:
             return "Missing MemCache Replacement Policy"
         
@@ -106,7 +108,6 @@ def config_mem_cache():
         else:
             return "Failed to get repsonse from memcache/clear"
 
-        return "Success"
     elif 'cache_clear' in request.form and 'cache_configure' not in request.form:
         response = requests.post("http://127.0.0.1:5001/clear", timeout=5)
         res_json = response.json()
@@ -114,6 +115,7 @@ def config_mem_cache():
             return "Cache Cleared"
         else:
             return "Failed to get repsonse from memcache/clear"
+    
     else:
         return "Invalid! Please choose cache configure or cache clear"
 
@@ -125,8 +127,54 @@ def resize_form():
 @webapp_manager.route('/resize_mem_cache', methods=['POST'])
 def resize_mem_cache():
     if 'manual_mode' not in request.form and 'auto_mode' in request.form:
-        # todo
-        return "1"
+        if 'max_missrate' not in request.form:
+            return "Missing Max Miss Rate threshold"
+        if 'min_missrate' not in request.form:
+            return "Missing Min Miss Rate threshold"
+        if 'ratio_expand' not in request.form:
+            return "Missing Ratio by which to expand the pool"
+        if 'ratio_shrink' not in request.form:
+            return "Missing Ratio by which to shrink the pool"
+
+        max_missrate = request.form.get('max_missrate')
+        min_missrate = request.form.get('min_missrate')
+        ratio_expand = request.form.get('ratio_expand')
+        ratio_shrink = request.form.get('ratio_shrink')
+
+        if max_missrate == '':
+            return 'Max Miss Rate threshold is empty'
+        if min_missrate == '':
+            return 'Min Miss Rate threshold is empty'
+        if ratio_expand == '':
+            return 'Ratio by which to expand the pool is empty'
+        if ratio_shrink == '':
+            return 'Ratio by which to shrink the pool is empty'
+        if max_missrate > 1 or min_missrate < 0 or max_missrate <= min_missrate:
+            return 'Invalid Thresholds!'
+        if ratio_expand <= 1 or ratio_shrink < 0 or ratio_shrink >= 1:
+            return 'Invalid Ratios!'
+        
+        # necessary to send request to set auto mode?
+        mode = {'autoscaler_mode': 1}
+        response = requests.post("http://127.0.0.1:5003/set_autoscaler_mode", mode=mode, timeout=5)
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            pass
+        elif res_json['success'] == 'False':
+            return "Auto mode failed!"
+        else:
+            return "Failed to get repsonse from autoscaler/set_autoscaler_mode"
+
+        data = {'max_missrate': max_missrate, 'min_missrate': min_missrate, 'ratio_expand': ratio_expand, 'ratio_shrink': ratio_shrink}
+        response = requests.post("http://127.0.0.1:5003/set_ratio", data=data, timeout=5)
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            return "Set Auto mode ratio is successful"
+        elif res_json['success'] == 'False':
+            return "Set Auto mode ratio failed!"
+        else:
+            return "Failed to get repsonse from autoscaler/set_ratio"
+        
     elif 'manual_mode' in request.form and 'auto_mode' not in request.form:
         # todo
         global curr_memcache_node_count
