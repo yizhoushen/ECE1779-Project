@@ -10,9 +10,6 @@ import math
 from datetime import datetime
 import threading
 
-MAX_NUM_OF_INSTANCES = 8
-MIN_NUM_OF_INSTANCES = 1
-
 # Autoscaler Status Variables
 AUTO_SCALER_ENABLE = False
 
@@ -58,16 +55,16 @@ def get_instance_change(miss_rate):
         # expand instances based on expand_ratio
         num_of_instances *= expand_ratio
         num_of_instances = math.ceil(num_of_instances)
-        if num_of_instances > MAX_NUM_OF_INSTANCES:
-            num_of_instances = MAX_NUM_OF_INSTANCES
+        if num_of_instances > 8:
+            num_of_instances = 8
 
     # shrink
     if miss_rate < min_miss_rate_threshold:
         # shrink instances based on shrink_ratio
         num_of_instances *= shrink_ratio
         num_of_instances = math.ceil(num_of_instances)
-        if num_of_instances < MIN_NUM_OF_INSTANCES:
-            num_of_instances = MIN_NUM_OF_INSTANCES
+        if num_of_instances < 1:
+            num_of_instances = 1
 
     delta_of_instances = int(num_of_instances - old_num_of_instances)
     return delta_of_instances
