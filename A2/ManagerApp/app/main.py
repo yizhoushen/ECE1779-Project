@@ -4,9 +4,14 @@ from flask import json
 from flask import jsonify
 import requests
 import mysql.connector
-from app.config import db_config
+from app.config import db_config, aws_access, s3_bucket
 from datetime import datetime, timedelta
 import jyserver.Flask as jsf
+import boto3
+
+s3 = boto3.resource('s3',
+                  aws_access_key_id=aws_access['aws_access_key_id'],
+                  aws_secret_access_key=aws_access['aws_secret_access_key'])
 
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
@@ -219,3 +224,24 @@ def resize_mem_cache():
 
     else:
         return "Invalid! Please choose manual mode or auto mode"
+
+
+@webapp_manager.route('/delete_all_data', methods=['POST'])
+def delet_all_data():
+    # delete all image paths in RDS
+    cnx = get_db()
+    cursor = cnx.cursor()
+    query = ''' TRUNCATE imagelist '''
+    cursor.execute(query)
+    cnx.commit()
+    # delet all images in S3
+    bucket = s3.Bucket(s3_bucket['name'])
+    bucket.objects.all().delete()
+    # clear contents in all memcache nodes
+    # todo
+    
+    return '1'
+
+@webapp_manager.route('/delete_memcache_nodes', methods=['POST'])
+def delet_memcache_nodes():
+    return '1'
