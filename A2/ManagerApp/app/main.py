@@ -189,11 +189,33 @@ def resize_mem_cache():
         else:
             return "Failed to get repsonse from autoscaler/set_ratio"
         
-        return "1"
+        # return "1"
 
     elif 'manual_mode' in request.form and 'auto_mode' not in request.form:
-        # todo
-        # global curr_memcache_node_count
-        return "new_memcache_node_count: {}".format(new_node_count)
+        # memcache node 1 (port 5001) is always active since the minium number of memcache is 1
+        # send activate/deactivate request to the rest (port 5004 - 5010)
+        for x in range(new_node_count - 1):
+            response = requests.post("http://127.0.0.1:500{}/activate".format(x+4), timeout=5)
+            res_json = response.json()
+            if res_json['success'] == 'True':
+                pass
+            elif res_json['success'] == 'False':
+                return "Activate memcache node {} failed!".format(x+2)
+            else:
+                return "Failed to get repsonse from memcache {}".format(x+2)
+        for x in range(8 - new_node_count):
+            response = requests.post("http://127.0.0.1:500{}/deactivate".format(x+3+new_node_count), timeout=5)
+            res_json = response.json()
+            if res_json['success'] == 'True':
+                pass
+            elif res_json['success'] == 'False':
+                return "Deactivate memcache node {} failed!".format(x+1+new_node_count)
+            else:
+                return "Failed to get repsonse from memcache {}".format(x+1+new_node_count)
+        
+        return "Resizing memcache pool is successful!"
+        
+        # return "new_memcache_node_count: {}".format(new_node_count)
+
     else:
         return "Invalid! Please choose manual mode or auto mode"
