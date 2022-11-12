@@ -35,6 +35,9 @@
             <li class="item"><a href="{{url_for('statistics')}}">memcache statistics</a></li>
             <li class="item"><a href="{{url_for('config_form')}}">configure memcache</a></li>
             <li class="item"><a href="{{url_for('resize_form')}}">configure resize mode</a></li>
+            <form action="{{url_for('delet_all_data')}}"  method="post">
+                <input type="submit" name="delete_all_data"  value="Delete Application Data">
+            </form>
         </ul>
 
     </div>

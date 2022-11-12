@@ -7,6 +7,7 @@ import mysql.connector
 
 import math
 from datetime import datetime
+from app.config import db_config
 
 MAX_NUM_OF_INSTANCES = 8
 MIN_NUM_OF_INSTANCES = 1
