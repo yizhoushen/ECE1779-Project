@@ -89,15 +89,15 @@ def operate_instances(delta_of_instances=0):
 def autoscaler_mode_change():
     # to be down
     # 不能用while，占用线程
-    if AUTO_SCALER_ENABLE:
-        # while 打头
-        # step 1： 每分钟获取miss rate
-        # step 2： 调整scale
-        # step 3： 等待1min
-        # 把上面的封装成1个函数，用线程
-    else:
-        # 关闭上面auto线程
-        # check 标志位（被动）
+    # if AUTO_SCALER_ENABLE:
+    #     # while 打头
+    #     # step 1： 每分钟获取miss rate
+    #     # step 2： 调整scale
+    #     # step 3： 等待1min
+    #     # 把上面的封装成1个函数，用线程
+    # else:
+    #     # 关闭上面auto线程
+    #     # check 标志位（被动）
 
     while AUTO_SCALER_ENABLE:
         # listen miss rate
