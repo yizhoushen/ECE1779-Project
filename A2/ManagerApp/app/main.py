@@ -146,6 +146,7 @@ def resize_form():
 @webapp_manager.route('/resize_mem_cache', methods=['POST'])
 def resize_mem_cache():
     if 'manual_mode' not in request.form and 'auto_mode' in request.form:
+        
         if 'max_missrate' not in request.form:
             return "Missing Max Miss Rate threshold"
         if 'min_missrate' not in request.form:
@@ -172,31 +173,36 @@ def resize_mem_cache():
             return 'Invalid Thresholds!'
         if ratio_expand <= 1 or ratio_shrink < 0 or ratio_shrink >= 1:
             return 'Invalid Ratios!'
-        
-        # necessary to send request to set auto mode?
-        mode = {'autoscaler_mode': 1}
-        response = requests.post("http://127.0.0.1:5003/set_autoscaler_mode", mode=mode, timeout=5)
-        res_json = response.json()
-        if res_json['success'] == 'True':
-            pass
-        elif res_json['success'] == 'False':
-            return "Auto mode failed!"
-        else:
-            return "Failed to get repsonse from autoscaler/set_autoscaler_mode"
 
-        data = {'max_missrate': max_missrate, 'min_missrate': min_missrate, 'ratio_expand': ratio_expand, 'ratio_shrink': ratio_shrink}
-        response = requests.post("http://127.0.0.1:5003/set_ratio", data=data, timeout=5)
+        data = {'autoscaler_mode': 1, 
+                'max_missrate': max_missrate, 
+                'min_missrate': min_missrate, 
+                'ratio_expand': ratio_expand, 
+                'ratio_shrink': ratio_shrink}
+
+        response = requests.post("http://127.0.0.1:5003/set_autoscaler_to_automatic_mode", data=data, timeout=5)
         res_json = response.json()
         if res_json['success'] == 'True':
-            return "Set Auto mode ratio is successful"
+            return "Set auto mode is successful"
         elif res_json['success'] == 'False':
-            return "Set Auto mode ratio failed!"
+            return "Set auto mode failed!"
         else:
-            return "Failed to get repsonse from autoscaler/set_ratio"
+            return "Failed to get repsonse from autoscaler/set_autoscaler_to_automatic_mode"
         
         # return "1"
 
     elif 'manual_mode' in request.form and 'auto_mode' not in request.form:
+        
+        data = {'autoscaler_mode': 0}
+        response = requests.post("http://127.0.0.1:5003/set_autoscaler_to_manual_mode", data=data, timeout=5)
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            pass
+        elif res_json['success'] == 'False':
+            return "Set manual mode failed!"
+        else:
+            return "Failed to get repsonse from autoscaler/set_autoscaler_to_manual_mode"
+        
         # memcache node 1 (port 5001) is always active since the minium number of memcache is 1
         # send activate/deactivate request to the rest (port 5004 - 5010)
         for x in range(new_node_count - 1):
