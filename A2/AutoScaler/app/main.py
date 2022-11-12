@@ -6,7 +6,7 @@ from flask import jsonify
 import mysql.connector
 
 import math
-from datetime import datetime, timedelta
+from datetime import datetime
 
 MAX_NUM_OF_INSTANCES = 8
 MIN_NUM_OF_INSTANCES = 1
@@ -23,6 +23,7 @@ shrink_ratio = 0.5
 # come from cloudwatch
 miss_rate = 0
 
+
 # database prepare & connect
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
@@ -30,6 +31,7 @@ def connect_to_database():
                                    host=db_config['host'],
                                    database=db_config['database'],
                                    auth_plugin='mysql_native_password')
+
 
 def get_db():
     db = connect_to_database()
@@ -64,11 +66,11 @@ def get_instance_change(miss_rate):
         if num_of_instances < MIN_NUM_OF_INSTANCES:
             num_of_instances = MIN_NUM_OF_INSTANCES
 
-    delta_of_instance = int(num_of_instances - old_num_of_instances)
+    delta_of_instances = int(num_of_instances - old_num_of_instances)
     return delta_of_instances
 
 
-def operate_instances(delta_of_instances = 0):
+def operate_instances(delta_of_instances=0):
     # to be done
     if delta_of_instances > 0:
         # maybe one way: while until delta_of_instances == 0
@@ -78,14 +80,16 @@ def operate_instances(delta_of_instances = 0):
     else:
         print("Don't need to adjust instances!")
 
+
 def autoscaler_mode_change():
     # to be down
     # 不能用while，占用线程
-    while(AUTO_SCALER_ENABLE):
+    while AUTO_SCALER_ENABLE:
         # listen miss rate
         delta_of_instances = get_instance_change(miss_rate)
         operate_instances(delta_of_instances)
     # check AUTO_SCALER_ENABLE变化
+
 
 @webapp_autoscaler.route('/')
 def main():
@@ -122,11 +126,11 @@ def set_autoscaler_mode():
                            message='Failure! Illegal parameters, the mode of autoscaler unchanged.')
     return response
 
+
 @webapp_autoscaler.route('/set_ratio', methods=['POST'])
 def set_ratio():
     ratio_type = request.form.get('ratio_type')
-    ratio_num = request.form.get('ratio_num')
-    # 潜在问题：ratio_num是string or float
+    ratio_num = float(request.form.get('ratio_num'))
 
     if ratio_type not in ["expand", "shrink"]:
         response = jsonify(success='False',
@@ -149,6 +153,7 @@ def set_ratio():
                                message='Success! The shrink_ratio has changed to ' + str(shrink_ratio))
     return response
 
+
 @webapp_autoscaler.route('/get_curr_autoscaler_status', methods=['POST'])
 def get_curr_autoscaler_status():
     curr_autoscaler_status = {'Auto Mode': AUTO_SCALER_ENABLE,
@@ -161,5 +166,3 @@ def get_curr_autoscaler_status():
     response = jsonify(success='True',
                        message=curr_autoscaler_status)
     return response
-
-
