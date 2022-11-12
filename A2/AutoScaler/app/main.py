@@ -89,6 +89,7 @@ def autoscaler_mode_change():
 
 @webapp_autoscaler.route('/')
 def main():
+    get_curr_autoscaler_status()
     # to be done
     # 默认autoscaler启动，AUTO_SCALER_ENABLE为True
     # 1.等待来自前端的信号
@@ -99,9 +100,11 @@ def main():
     #
     #
     # return render_template("main.html")
+    return "The auto scaler is running. " \
+           " Auto mode: " + str(AUTO_SCALER_ENABLE)
 
 
-@webapp_memcache.route('/set_autoscaler_mode', methods=['POST'])
+@webapp_autoscaler.route('/set_autoscaler_mode', methods=['POST'])
 def set_autoscaler_mode():
     new_autoscaler_mode = request.form.get('autoscaler_mode')
     if new_autoscaler_mode == 1:
@@ -119,7 +122,7 @@ def set_autoscaler_mode():
                            message='Failure! Illegal parameters, the mode of autoscaler unchanged.')
     return response
 
-@webapp_memcache.route('/set_ratio', methods=['POST'])
+@webapp_autoscaler.route('/set_ratio', methods=['POST'])
 def set_ratio():
     ratio_type = request.form.get('ratio_type')
     ratio_num = request.form.get('ratio_num')
@@ -146,26 +149,15 @@ def set_ratio():
                                message='Success! The shrink_ratio has changed to ' + str(shrink_ratio))
     return response
 
-@webapp_memcache.route('/get_curr_autoscaler_mode', methods=['POST'])
-def get_curr_autoscaler_mode():
-    if AUTO_SCALER_ENABLE:
-        response = jsonify(success='True',
-                           message='The mode of autoscaler is on.')
-    else:
-        response = jsonify(success='True',
-                           message='The mode of autoscaler is off.')
-    return response
-
-@webapp_memcache.route('/get_curr_autoscaler_status', methods=['POST'])
+@webapp_autoscaler.route('/get_curr_autoscaler_status', methods=['POST'])
 def get_curr_autoscaler_status():
-    curr_autoscaler_status = {'Mode': AUTO_SCALER_ENABLE,
+    curr_autoscaler_status = {'Auto Mode': AUTO_SCALER_ENABLE,
                               'Max Miss Rate threshold': MAX_MISS_RATE_THRESHOLD,
                               'Min Miss Rate threshold': MIN_MISS_RATE_THRESHOLD,
                               'Expand Ratio': expand_ratio,
                               'Shrink Ratio': shrink_ratio,
                               'Time': datetime.now().strftime("%y-%m-%d %H:%M:%S")
                               }
-    # 潜在问题：这里应该怎么发？
     response = jsonify(success='True',
                        message=curr_autoscaler_status)
     return response
