@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
     <head>
         <title>{{title}}</title>
@@ -21,6 +21,43 @@
 
             {% block content %}
             {% endblock %}
+        </div>
+    </body>
+</html> -->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>{{title}}</title>
+        <style>
+
+        </style>
+         <link rel = "stylesheet" href = "../static/css/mainstyle.css">
+
+    </head>
+    <body>
+
+       <div  class="top">
+
+            <ul>
+                <li style="font-weight:bold;"><a href={{url_for('main')}}>HOME</a></li>
+                <li><a href="{{url_for('upload_form')}}">upload image</a></li>
+                <li><a href="{{url_for('display_form')}}">show image</a></li>
+                <li><a href="{{url_for('all_keys')}}">show all keys</a></li>
+            </ul>
+
+        </div>
+
+
+
+
+        <div class = 'base'>
+        <h1>{{title}}</h1>
+            <div>
+
+                {% block content %}
+                {% endblock %}
+            </div>
         </div>
     </body>
 </html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <head>
     <title>Manager App</title>
 </head>
@@ -16,4 +16,27 @@
         </ul>
         </div>
     <body>    
+</html> -->
+
+<!DOCTYPE html>
+<head>
+    <title>Manager App</title>
+     <link rel = "stylesheet" href = "../static/css/mainstyle.css">
+<style>
+
+</style>
+</head>
+<html>
+    <body>
+    <div class="container">
+        <h1> Home</h1>
+
+        <ul>
+            <li class="item"><a href="{{url_for('statistics')}}">memcache statistics</a></li>
+            <li class="item"><a href="{{url_for('config_form')}}">configure memcache</a></li>
+            <li class="item"><a href="{{url_for('resize_form')}}">configure resize mode</a></li>
+        </ul>
+
+    </div>
+    <body>
 </html>
