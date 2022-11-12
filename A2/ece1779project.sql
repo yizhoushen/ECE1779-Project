@@ -77,4 +77,7 @@ INSERT INTO memcachelist VALUES(5010, false);
 
 -- DELETE FROM imagelist WHERE ImageID = 'ds1';
 
+-- update memcachelist set activeStatus=true where memcacheID=5001;
+-- update memcachelist set activeStatus=true where memcacheID=5004;
+-- update memcachelist set activeStatus=true where memcacheID=5005;
 

@@ -20,6 +20,15 @@ def get_db():
         db = g._database = connect_to_database()
     return db
 
+# def get_memcache_count():
+#     cnx = get_db()
+#     cursor = cnx.cursor()
+#     query_get_memcache_count = '''SELECT COUNT(memcacheID) FROM memcachelist WHERE activeStatus = true'''
+#     cursor.execute(query_get_memcache_count)
+#     row = cursor.fetchone()
+#     count = row[0]
+#     return count
+
 @webapp_manager.teardown_appcontext
 def teardown_db(exception):
     db = getattr(g, '_database', None)
@@ -31,29 +40,27 @@ def teardown_db(exception):
 def main():
     return render_template("main.html")
 
-# change count
-curr_memcache_node_count = 1
-global new_memcache_node_count
+# global
+new_node_count = 0
 
 @jsf.use(webapp_manager)
 class App:
     def __init__(self) -> None:
-        self.count = curr_memcache_node_count
+        self.count = new_node_count
     
     def increment(self):
         if self.count < 8:
             self.count += 1
         self.js.document.getElementById('node_count').innerHTML = self.count
-        global new_memcache_node_count
-        new_memcache_node_count = self.count
+        global new_node_count
+        new_node_count = self.count
         
-    
     def decrement(self):
         if self.count > 1:
             self.count -= 1
         self.js.document.getElementById('node_count').innerHTML = self.count
-        global new_memcache_node_count
-        new_memcache_node_count = self.count
+        global new_node_count
+        new_node_count = self.count
 
 
 @webapp_manager.route('/statistics', methods=['GET'])
@@ -122,7 +129,14 @@ def config_mem_cache():
 
 @webapp_manager.route('/resize_form', methods=['GET'])
 def resize_form():
-    return App.render(render_template("resize_form.html", title="Change Memory Cache Resize Mode", curr_memcache_node_count=curr_memcache_node_count))
+    # curr_node_count = get_memcache_count()
+    cnx = get_db()
+    cursor = cnx.cursor()
+    query_get_memcache_count = '''SELECT COUNT(memcacheID) FROM memcachelist WHERE activeStatus = true'''
+    cursor.execute(query_get_memcache_count)
+    row = cursor.fetchone()
+    curr_node_count = row[0]
+    return App.render(render_template("resize_form.html", title="Change Memory Cache Resize Mode", curr_node_count=curr_node_count, new_node_count=new_node_count))
 
 @webapp_manager.route('/resize_mem_cache', methods=['POST'])
 def resize_mem_cache():
@@ -175,10 +189,11 @@ def resize_mem_cache():
         else:
             return "Failed to get repsonse from autoscaler/set_ratio"
         
+        return "1"
+
     elif 'manual_mode' in request.form and 'auto_mode' not in request.form:
         # todo
-        global curr_memcache_node_count
-        curr_memcache_node_count = new_memcache_node_count
-        return "new_memcache_node_count: {}".format(new_memcache_node_count)
+        # global curr_memcache_node_count
+        return "new_memcache_node_count: {}".format(new_node_count)
     else:
         return "Invalid! Please choose manual mode or auto mode"
