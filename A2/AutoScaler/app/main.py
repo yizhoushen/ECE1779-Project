@@ -3,15 +3,12 @@ from app import webapp_autoscaler
 from flask import json
 from flask import jsonify
 
+from app.config import db_config
 import mysql.connector
 
 import math
 from datetime import datetime
-
-from app.config import db_config
-
 import threading
-
 
 MAX_NUM_OF_INSTANCES = 8
 MIN_NUM_OF_INSTANCES = 1
@@ -19,8 +16,8 @@ MIN_NUM_OF_INSTANCES = 1
 # Autoscaler Status Variables
 AUTO_SCALER_ENABLE = False
 
-MAX_MISS_RATE_THRESHOLD = 0
-MIN_MISS_RATE_THRESHOLD = 0
+max_miss_rate_threshold = 0.8
+min_miss_rate_threshold = 0.2
 
 expand_ratio = 2
 shrink_ratio = 0.5
@@ -45,7 +42,8 @@ def get_db():
 
 def get_instance_change(miss_rate):
     # delta_of_instance: positive = num to be added； negative = num to be reduced ; 0 means no change
-    delta_of_instances = 0
+    global max_miss_rate_threshold, min_miss_rate_threshold
+    global expand_ratio, shrink_ratio
 
     # get most updated num_of_instances, old_num_of_instance
     cnx = get_db()
@@ -56,7 +54,7 @@ def get_instance_change(miss_rate):
     old_num_of_instances = cursor.fetchone()[0]
 
     # expand
-    if miss_rate > MAX_MISS_RATE_THRESHOLD:
+    if miss_rate > max_miss_rate_threshold:
         # expand instances based on expand_ratio
         num_of_instances *= expand_ratio
         num_of_instances = math.ceil(num_of_instances)
@@ -64,7 +62,7 @@ def get_instance_change(miss_rate):
             num_of_instances = MAX_NUM_OF_INSTANCES
 
     # shrink
-    if miss_rate < MIN_MISS_RATE_THRESHOLD:
+    if miss_rate < min_miss_rate_threshold:
         # shrink instances based on shrink_ratio
         num_of_instances *= shrink_ratio
         num_of_instances = math.ceil(num_of_instances)
@@ -86,7 +84,7 @@ def operate_instances(delta_of_instances=0):
         print("Don't need to adjust instances!")
 
 
-def autoscaler_mode_change():
+# def autoscaler_mode_change():
     # to be down
     # 不能用while，占用线程
     # if AUTO_SCALER_ENABLE:
@@ -99,10 +97,10 @@ def autoscaler_mode_change():
     #     # 关闭上面auto线程
     #     # check 标志位（被动）
 
-    while AUTO_SCALER_ENABLE:
-        # listen miss rate
-        delta_of_instances = get_instance_change(miss_rate)
-        operate_instances(delta_of_instances)
+    # while AUTO_SCALER_ENABLE:
+    #     # listen miss rate
+    #     delta_of_instances = get_instance_change(miss_rate)
+    #     operate_instances(delta_of_instances)
     # check AUTO_SCALER_ENABLE变化
 
     # 线程持续启动，靠里面的标志位决定
@@ -110,66 +108,109 @@ def autoscaler_mode_change():
 
 @webapp_autoscaler.route('/')
 def main():
+    global AUTO_SCALER_ENABLE
     get_curr_autoscaler_status()
-    # to be done
-    # 默认autoscaler启动，AUTO_SCALER_ENABLE为True
-    # 1.等待来自前端的信号
-    #     1.1 若传来手动信号，则启动autoscaler功能函数
-    #     1.2 若传来自动信号，则停止autoscaler功能函数 / 启动 非autoscaler功能
-
-    # if (new_message != AUTO_SCALER_ENABLE):
-    #
-    #
-    # return render_template("main.html")
     return "The auto scaler is running. " \
            " Auto mode: " + str(AUTO_SCALER_ENABLE)
 
 
-@webapp_autoscaler.route('/set_autoscaler_mode', methods=['POST'])
-# has been tested successfully at Nov. 11
-def set_autoscaler_mode():
+# @webapp_autoscaler.route('/set_autoscaler_mode', methods=['POST'])
+# # has been tested successfully at Nov. 11
+# def set_autoscaler_mode():
+#     new_autoscaler_mode = float(request.form.get('autoscaler_mode'))
+#     if new_autoscaler_mode == 1.0:
+#         AUTO_SCALER_ENABLE = True
+#         # autoscaler_mode_change()
+#         response = jsonify(success='True',
+#                            message='Success! The mode of autoscaler is on.')
+#     elif new_autoscaler_mode == 0.0:
+#         AUTO_SCALER_ENABLE = False
+#         # autoscaler_mode_change()
+#         response = jsonify(success='True',
+#                            message='Success! The mode of autoscaler is off.')
+#     else:
+#         response = jsonify(success='False',
+#                            message='Failure! Illegal parameters, the mode of autoscaler unchanged.')
+#     return response
+#
+#
+# @webapp_autoscaler.route('/set_ratio', methods=['POST'])
+# # has been tested successfully at Nov. 11
+# def set_ratio():
+#     ratio_type = request.form.get('ratio_type')
+#     ratio_num = float(request.form.get('ratio_num'))
+#
+#     if ratio_type not in ["expand", "shrink"]:
+#         response = jsonify(success='False',
+#                            message='Failure! The ratio_type is illegal.')
+#     elif ratio_type == "expand":
+#         if ratio_num <= 1.0:
+#             response = jsonify(success='False',
+#                                message='Failure! The ratio_num is illegal.')
+#         else:
+#             expand_ratio = ratio_num
+#             response = jsonify(success='True',
+#                                message='Success! The expand_ratio has changed to ' + str(expand_ratio))
+#     elif ratio_type == "shrink":
+#         if ratio_num <= 0.0 or ratio_num >= 1.0:
+#             response = jsonify(success='False',
+#                                message='Failure! The ratio_num is illegal.')
+#         else:
+#             shrink_ratio = ratio_num
+#             response = jsonify(success='True',
+#                                message='Success! The shrink_ratio has changed to ' + str(shrink_ratio))
+#     return response
+
+
+@webapp_autoscaler.route('/set_autoscaler_to_automatic_mode', methods=['POST'])
+# has been tested successfully at Nov. 12
+def set_autoscaler_to_automatic_mode():
+    global AUTO_SCALER_ENABLE
+    global max_miss_rate_threshold, min_miss_rate_threshold
+    global expand_ratio, shrink_ratio
+
     new_autoscaler_mode = float(request.form.get('autoscaler_mode'))
-    if new_autoscaler_mode == 1.0:
-        AUTO_SCALER_ENABLE = True
-        # autoscaler_mode_change()
-        response = jsonify(success='True',
-                           message='Success! The mode of autoscaler is on.')
-    elif new_autoscaler_mode == 0.0:
-        AUTO_SCALER_ENABLE = False
-        # autoscaler_mode_change()
-        response = jsonify(success='True',
-                           message='Success! The mode of autoscaler is off.')
-    else:
-        response = jsonify(success='False',
-                           message='Failure! Illegal parameters, the mode of autoscaler unchanged.')
+    new_max_miss_rate_threshold = float(request.form.get('max_missrate'))
+    new_min_miss_rate_threshold = float(request.form.get('min_missrate'))
+    new_expand_ratio = float(request.form.get('ratio_expand'))
+    new_shrink_ratio = float(request.form.get('ratio_shrink'))
+
+    if new_autoscaler_mode == 1:
+        if 0 < new_max_miss_rate_threshold <= 1 and 0 <= new_min_miss_rate_threshold < 1 and new_min_miss_rate_threshold < new_max_miss_rate_threshold:
+            if new_expand_ratio > 1 and 0 < new_shrink_ratio < 1:
+                AUTO_SCALER_ENABLE = True
+                max_miss_rate_threshold = new_max_miss_rate_threshold
+                min_miss_rate_threshold = new_min_miss_rate_threshold
+                expand_ratio = new_expand_ratio
+                shrink_ratio = new_shrink_ratio
+
+                response = jsonify(success='True',
+                                   message='The parameters of autoscaler have changed success.')
+                print(AUTO_SCALER_ENABLE)
+                return response
+
+    response = jsonify(success='False',
+                       message='Invalid parameter.')
+    print(AUTO_SCALER_ENABLE)
     return response
 
 
-@webapp_autoscaler.route('/set_ratio', methods=['POST'])
-# has been tested successfully at Nov. 11
-def set_ratio():
-    ratio_type = request.form.get('ratio_type')
-    ratio_num = float(request.form.get('ratio_num'))
+@webapp_autoscaler.route('/set_autoscaler_to_manual_mode', methods=['POST'])
+# has been tested successfully at Nov. 12
+def set_autoscaler_to_manual_mode():
+    global AUTO_SCALER_ENABLE
 
-    if ratio_type not in ["expand", "shrink"]:
-        response = jsonify(success='False',
-                           message='Failure! The ratio_type is illegal.')
-    elif ratio_type == "expand":
-        if ratio_num <= 1.0:
-            response = jsonify(success='False',
-                               message='Failure! The ratio_num is illegal.')
-        else:
-            expand_ratio = ratio_num
-            response = jsonify(success='True',
-                               message='Success! The expand_ratio has changed to ' + str(expand_ratio))
-    elif ratio_type == "shrink":
-        if ratio_num <= 0.0 or ratio_num >= 1.0:
-            response = jsonify(success='False',
-                               message='Failure! The ratio_num is illegal.')
-        else:
-            shrink_ratio = ratio_num
-            response = jsonify(success='True',
-                               message='Success! The shrink_ratio has changed to ' + str(shrink_ratio))
+    new_autoscaler_mode = float(request.form.get('autoscaler_mode'))
+    if new_autoscaler_mode == 0:
+        AUTO_SCALER_ENABLE = False
+        response = jsonify(success='True',
+                           message='The parameters of autoscaler have changed success.')
+        print(AUTO_SCALER_ENABLE)
+        return response
+
+    print(AUTO_SCALER_ENABLE)
+    response = jsonify(success='False',
+                       message='Invalid parameter.')
     return response
 
 
@@ -177,8 +218,8 @@ def set_ratio():
 # has been tested successfully at Nov. 11
 def get_curr_autoscaler_status():
     curr_autoscaler_status = {'Auto Mode': AUTO_SCALER_ENABLE,
-                              'Max Miss Rate Threshold': MAX_MISS_RATE_THRESHOLD,
-                              'Min Miss Rate Threshold': MIN_MISS_RATE_THRESHOLD,
+                              'Max Miss Rate Threshold': max_miss_rate_threshold,
+                              'Min Miss Rate Threshold': min_miss_rate_threshold,
                               'Expand Ratio': expand_ratio,
                               'Shrink Ratio': shrink_ratio,
                               'Time': datetime.now().strftime("%y-%m-%d %H:%M:%S")
