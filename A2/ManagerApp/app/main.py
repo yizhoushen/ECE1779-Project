@@ -51,7 +51,7 @@ def create_ec2():
         MinCount=1,
         MaxCount=1,
         InstanceType="t2.micro",
-        KeyName="ece1779-2nd-acc" 
+        KeyName="ece1779-2nd-acc"
     )
     instance_id = instances[0].id
     return instance_id
@@ -60,6 +60,14 @@ def delete_ec2(instance_id):
     ec2 = boto3.client('ec2')
     ec2.terminate_instances(InstanceIds = [instance_id])
 
+#Create/terminate or Start/Stop the instance?
+def start_ec2(instance_id):
+    ec2 = boto3.client('ec2')
+    ec2.start_instances(InstanceIds=[instance_id])
+
+def stop_ec2(instance_id):
+    ec2 = boto3.client('ec2')
+    ec2.stop_instances(InstanceIds=[instance_id])
 
 @webapp_manager.route('/', methods=['GET'])
 @webapp_manager.route('/main', methods=['GET'])
@@ -70,14 +78,14 @@ def main():
 class App:
     def __init__(self) -> None:
         self.count = new_node_count
-    
+
     def increment(self):
         if self.count < 8:
             self.count += 1
         self.js.document.getElementById('node_count').innerHTML = self.count
         global new_node_count
         new_node_count = self.count
-        
+
     def decrement(self):
         if self.count > 1:
             self.count -= 1
@@ -107,7 +115,7 @@ def config_mem_cache():
             return "Missing MemCache size"
         if 'memcache_policy' not in request.form:
             return "Missing MemCache Replacement Policy"
-        
+
         memcache_szie = request.form.get('memcache_size')
         memcache_policy = request.form.get('memcache_policy')
 
@@ -128,7 +136,7 @@ def config_mem_cache():
 
         cursor.execute(query, (memcache_szie, int(memcache_policy)))
         cnx.commit()
-        
+
         response = requests.post("http://127.0.0.1:5001/refreshConfiguration", timeout=5)
         res_json = response.json()
         if res_json['success'] == 'True':
@@ -145,7 +153,7 @@ def config_mem_cache():
             return "Cache Cleared"
         else:
             return "Failed to get repsonse from memcache/clear"
-    
+
     else:
         return "Invalid! Please choose cache configure or cache clear"
 
@@ -165,7 +173,7 @@ def resize_form():
 @webapp_manager.route('/resize_mem_cache', methods=['POST'])
 def resize_mem_cache():
     if 'manual_mode' not in request.form and 'auto_mode' in request.form:
-        
+
         if 'max_missrate' not in request.form:
             return "Missing Max Miss Rate threshold"
         if 'min_missrate' not in request.form:
@@ -193,10 +201,10 @@ def resize_mem_cache():
         if ratio_expand <= 1 or ratio_shrink < 0 or ratio_shrink >= 1:
             return 'Invalid Ratios!'
 
-        data = {'autoscaler_mode': 1, 
-                'max_missrate': max_missrate, 
-                'min_missrate': min_missrate, 
-                'ratio_expand': ratio_expand, 
+        data = {'autoscaler_mode': 1,
+                'max_missrate': max_missrate,
+                'min_missrate': min_missrate,
+                'ratio_expand': ratio_expand,
                 'ratio_shrink': ratio_shrink}
 
         response = requests.post("http://127.0.0.1:5003/set_autoscaler_to_automatic_mode", data=data, timeout=5)
@@ -207,11 +215,11 @@ def resize_mem_cache():
             return "Set auto mode failed!"
         else:
             return "Failed to get repsonse from autoscaler/set_autoscaler_to_automatic_mode"
-        
+
         # return "1"
 
     elif 'manual_mode' in request.form and 'auto_mode' not in request.form:
-        
+
         data = {'autoscaler_mode': 0}
         response = requests.post("http://127.0.0.1:5003/set_autoscaler_to_manual_mode", data=data, timeout=5)
         res_json = response.json()
@@ -221,7 +229,7 @@ def resize_mem_cache():
             return "Set manual mode failed!"
         else:
             return "Failed to get repsonse from autoscaler/set_autoscaler_to_manual_mode"
-        
+
         # memcache node 1 (port 5001) is always active since the minium number of memcache is 1
         # send activate/deactivate request to the rest (port 5004 - 5010)
         # for x in range(new_node_count - 1):
@@ -242,11 +250,11 @@ def resize_mem_cache():
         #         return "Deactivate memcache node {} failed!".format(x+1+new_node_count)
         #     else:
         #         return "Failed to get repsonse from memcache {}".format(x+1+new_node_count)
-        
+
         # return "Resizing memcache pool is successful!"
-        
+
         # return "new_memcache_node_count: {}".format(new_node_count)
-        
+
         cnx = get_db()
 
         if new_node_count > curr_node_count:
@@ -254,7 +262,7 @@ def resize_mem_cache():
                 created_instance_id = create_ec2()
                 memcache_id = x + curr_node_count
                 memcache_list[memcache_id] = created_instance_id
-                
+
                 cursor = cnx.cursor()
                 query = ''' INSERT INTO memcachelist(memcacheID, instanceID, publicIP)
                             VALUES(%s, %s, %s)'''
@@ -297,7 +305,7 @@ def delet_all_data():
     bucket.objects.all().delete()
     # clear contents in all memcache nodes
     # todo
-    
+
     return '1'
 
 @webapp_manager.route('/delete_memcache_nodes', methods=['POST'])
