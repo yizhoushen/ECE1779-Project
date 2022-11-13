@@ -89,10 +89,10 @@ def autoscaler_mode_change():
             print("The auto scaler is running in auto model.")
             # step 1： get miss rate from CloudWatch API
             # step 2： adjust instances
-            # delta_of_instances = get_instance_change(miss_rate=miss_rate)
-            # operate_instances(delta_of_instances)
-            # step 3： wait 1 min
-            time.sleep(AUTO_SCALER_CHECK_SIGN_INTERVAL)
+                # delta_of_instances = get_instance_change(miss_rate=miss_rate)
+                # operate_instances(delta_of_instances)
+        print("The auto scaler is running in manual model.")
+        time.sleep(AUTO_SCALER_CHECK_SIGN_INTERVAL)
 
 
 threading.Thread(target=autoscaler_mode_change, daemon=True).start()
