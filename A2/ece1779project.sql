@@ -45,13 +45,13 @@ create table statistics
 
 create table memcachelist
 (
-memcacheID int NOT NULL,
-instanceID text NOT NULL,
-publicIP text NOT NULL,
-PRIMARY KEY(memcacheID)
+MemcacheID int NOT NULL,
+InstanceID text NOT NULL,
+PublicIP text NOT NULL,
+PRIMARY KEY(MemcacheID)
 );
 
-INSERT INTO memcachelist VALUES(0, 'current runing instance id', 'not implemented');
+INSERT INTO memcachelist VALUES(0, 'current runing instance id', 'current runing public ip');
 
 -- INSERT INTO statistics
 -- VALUES(
