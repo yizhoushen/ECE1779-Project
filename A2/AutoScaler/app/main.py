@@ -47,7 +47,7 @@ def get_instance_change(miss_rate):
     # get most updated num_of_instances, old_num_of_instance
     cnx = get_db()
     cursor = cnx.cursor()
-    sql_num_of_activate_instances = "SELECT COUNT(*) FROM memcachelist WHERE activeStatus = TRUE"
+    sql_num_of_activate_instances = "SELECT COUNT(*) FROM memcachelist"
     cursor.execute(sql_num_of_activate_instances)
     num_of_instances = cursor.fetchone()[0]
     old_num_of_instances = cursor.fetchone()[0]
@@ -84,17 +84,18 @@ def operate_instances(delta_of_instances=0):
 
 
 def autoscaler_mode_change():
-    while AUTO_SCALER_ENABLE:
-        print("The auto scaler is running in auto model.")
-        # step 1： get miss rate from CloudWatch API
-        # step 2： just instances
-        # delta_of_instances = get_instance_change(miss_rate=miss_rate)
-        # operate_instances(delta_of_instances)
-        # step 3： wait 1 min
-        time.sleep(AUTO_SCALER_CHECK_SIGN_INTERVAL)
+    while True:
+        if AUTO_SCALER_ENABLE:
+            print("The auto scaler is running in auto model.")
+            # step 1： get miss rate from CloudWatch API
+            # step 2： adjust instances
+            # delta_of_instances = get_instance_change(miss_rate=miss_rate)
+            # operate_instances(delta_of_instances)
+            # step 3： wait 1 min
+            time.sleep(AUTO_SCALER_CHECK_SIGN_INTERVAL)
 
 
-threading.Thread(target=autoscaler_mode_change(), daemon=True).start()
+threading.Thread(target=autoscaler_mode_change, daemon=True).start()
 
 
 @webapp_autoscaler.route('/')
