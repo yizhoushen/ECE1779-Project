@@ -6,16 +6,16 @@
 #              'database': 'ece1779project'}
 
 # config of local database
-# db_config = {'user': 'dbadmin',
-#              'password': 'admin1234',
-#              'host': '127.0.0.1',
-#              'database': 'ece1779project'}
-
-# config of aws ec2 database
-db_config = {'user': 'root',
-             'password': 'ece1779pass',
+db_config = {'user': 'dbadmin',
+             'password': 'admin1234',
              'host': '127.0.0.1',
              'database': 'ece1779project'}
+
+# config of aws ec2 database
+# db_config = {'user': 'root',
+#              'password': 'ece1779pass',
+#              'host': '127.0.0.1',
+#              'database': 'ece1779project'}
 
 # Better to use local credentials under ~/.aws rather than explicit access keys
 # aws_access = {'aws_access_key_id': '<do not upload access key to github, change to your own>',

@@ -6,6 +6,7 @@ show tables;
 -- drop table imagelist;
 -- drop table configuration;
 -- drop table statistics;
+-- drop table memcachelist;
 
 create table imagelist
 (
@@ -45,18 +46,12 @@ create table statistics
 create table memcachelist
 (
 memcacheID int NOT NULL,
-activeStatus boolean NOT NULL,
+instanceID text NOT NULL,
+publicIP text NOT NULL,
 PRIMARY KEY(memcacheID)
 );
 
-INSERT INTO memcachelist VALUES(5001, false);
-INSERT INTO memcachelist VALUES(5004, false);
-INSERT INTO memcachelist VALUES(5005, false);
-INSERT INTO memcachelist VALUES(5006, false);
-INSERT INTO memcachelist VALUES(5007, false);
-INSERT INTO memcachelist VALUES(5008, false);
-INSERT INTO memcachelist VALUES(5009, false);
-INSERT INTO memcachelist VALUES(5010, false);
+INSERT INTO memcachelist VALUES(0, 'current runing instance id', 'not implemented');
 
 -- INSERT INTO statistics
 -- VALUES(

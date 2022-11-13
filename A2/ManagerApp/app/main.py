@@ -40,13 +40,31 @@ def teardown_db(exception):
     if db is not None:
         db.close()
 
+# global
+new_node_count = 0
+memcache_list = {0: 'i-0b71b0a8514c4a69d (does not matter)'}
+
+def create_ec2():
+    ec2 = boto3.resource('ec2')
+    instances = ec2.create_instances(
+        ImageId='ami-0b3a8a363dc47e0eb',
+        MinCount=1,
+        MaxCount=1,
+        InstanceType="t2.micro",
+        KeyName="ece1779-2nd-acc" 
+    )
+    instance_id = instances[0].id
+    return instance_id
+
+def delete_ec2(instance_id):
+    ec2 = boto3.client('ec2')
+    ec2.terminate_instances(InstanceIds = [instance_id])
+
+
 @webapp_manager.route('/', methods=['GET'])
 @webapp_manager.route('/main', methods=['GET'])
 def main():
     return render_template("main.html")
-
-# global
-new_node_count = 0
 
 @jsf.use(webapp_manager)
 class App:
@@ -137,9 +155,10 @@ def resize_form():
     # curr_node_count = get_memcache_count()
     cnx = get_db()
     cursor = cnx.cursor()
-    query_get_memcache_count = '''SELECT COUNT(memcacheID) FROM memcachelist WHERE activeStatus = true'''
+    query_get_memcache_count = '''SELECT COUNT(memcacheID) FROM memcachelist'''
     cursor.execute(query_get_memcache_count)
     row = cursor.fetchone()
+    global curr_node_count
     curr_node_count = row[0]
     return App.render(render_template("resize_form.html", title="Change Memory Cache Resize Mode", curr_node_count=curr_node_count, new_node_count=new_node_count))
 
@@ -205,28 +224,60 @@ def resize_mem_cache():
         
         # memcache node 1 (port 5001) is always active since the minium number of memcache is 1
         # send activate/deactivate request to the rest (port 5004 - 5010)
-        for x in range(new_node_count - 1):
-            response = requests.post("http://127.0.0.1:500{}/activate".format(x+4), timeout=5)
-            res_json = response.json()
-            if res_json['success'] == 'True':
-                pass
-            elif res_json['success'] == 'False':
-                return "Activate memcache node {} failed!".format(x+2)
-            else:
-                return "Failed to get repsonse from memcache {}".format(x+2)
-        for x in range(8 - new_node_count):
-            response = requests.post("http://127.0.0.1:500{}/deactivate".format(x+3+new_node_count), timeout=5)
-            res_json = response.json()
-            if res_json['success'] == 'True':
-                pass
-            elif res_json['success'] == 'False':
-                return "Deactivate memcache node {} failed!".format(x+1+new_node_count)
-            else:
-                return "Failed to get repsonse from memcache {}".format(x+1+new_node_count)
+        # for x in range(new_node_count - 1):
+        #     response = requests.post("http://127.0.0.1:500{}/activate".format(x+4), timeout=5)
+        #     res_json = response.json()
+        #     if res_json['success'] == 'True':
+        #         pass
+        #     elif res_json['success'] == 'False':
+        #         return "Activate memcache node {} failed!".format(x+2)
+        #     else:
+        #         return "Failed to get repsonse from memcache {}".format(x+2)
+        # for x in range(8 - new_node_count):
+        #     response = requests.post("http://127.0.0.1:500{}/deactivate".format(x+3+new_node_count), timeout=5)
+        #     res_json = response.json()
+        #     if res_json['success'] == 'True':
+        #         pass
+        #     elif res_json['success'] == 'False':
+        #         return "Deactivate memcache node {} failed!".format(x+1+new_node_count)
+        #     else:
+        #         return "Failed to get repsonse from memcache {}".format(x+1+new_node_count)
         
-        return "Resizing memcache pool is successful!"
+        # return "Resizing memcache pool is successful!"
         
         # return "new_memcache_node_count: {}".format(new_node_count)
+        
+        cnx = get_db()
+
+        if new_node_count > curr_node_count:
+            for x in range (new_node_count - curr_node_count):
+                created_instance_id = create_ec2()
+                memcache_id = x + curr_node_count
+                memcache_list[memcache_id] = created_instance_id
+                
+                cursor = cnx.cursor()
+                query = ''' INSERT INTO memcachelist(memcacheID, instanceID, publicIP)
+                            VALUES(%s, %s, %s)'''
+                cursor.execute(query, (memcache_id, created_instance_id, 'not implemented'))
+                cnx.commit()
+            return "memcache pool size increment is successful!"
+
+        elif new_node_count < curr_node_count:
+            for x in range (curr_node_count - new_node_count):
+                memcache_id = curr_node_count - 1 - x
+                deleted_instance_id = memcache_list[memcache_id]
+                delete_ec2(deleted_instance_id)
+                memcache_list.pop(memcache_id)
+
+                cursor = cnx.cursor()
+                query = ''' DELETE FROM memcachelist
+                            WHERE memcacheID = %s'''
+                cursor.execute(query, (memcache_id,))
+                cnx.commit()
+            return "memcache pool size decrement is successful!"
+        else:
+            return "memcache pool size did not change"
+
 
     else:
         return "Invalid! Please choose manual mode or auto mode"
