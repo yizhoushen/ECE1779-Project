@@ -5,7 +5,14 @@
 #              'host': 'database-new.c5xj5z6rnfm8.us-east-1.rds.amazonaws.com',
 #              'database': 'ece1779project'}
 
-db_config = {'user': 'dbadmin',
-             'password': 'admin1234',
+# config of local database
+# db_config = {'user': 'dbadmin',
+#              'password': 'admin1234',
+#              'host': '127.0.0.1',
+#              'database': 'ece1779project'}
+
+# config of aws ec2 database
+db_config = {'user': 'root',
+             'password': 'ece1779pass',
              'host': '127.0.0.1',
              'database': 'ece1779project'}
