@@ -53,8 +53,8 @@ def create_ec2():
         InstanceType="t2.micro",
         KeyName="ece1779-2nd-acc"
     )
-    instance_id = instances[0].id
-    return instance_id
+    instance = instances[0]
+    return instance
 
 def delete_ec2(instance_id):
     ec2 = boto3.client('ec2')
@@ -219,7 +219,6 @@ def resize_mem_cache():
         # return "1"
 
     elif 'manual_mode' in request.form and 'auto_mode' not in request.form:
-
         data = {'autoscaler_mode': 0}
         response = requests.post("http://127.0.0.1:5003/set_autoscaler_to_manual_mode", data=data, timeout=5)
         res_json = response.json()
@@ -229,7 +228,7 @@ def resize_mem_cache():
             return "Set manual mode failed!"
         else:
             return "Failed to get repsonse from autoscaler/set_autoscaler_to_manual_mode"
-
+            
         # memcache node 1 (port 5001) is always active since the minium number of memcache is 1
         # send activate/deactivate request to the rest (port 5004 - 5010)
         # for x in range(new_node_count - 1):
@@ -259,27 +258,43 @@ def resize_mem_cache():
 
         if new_node_count > curr_node_count:
             for x in range (new_node_count - curr_node_count):
-                created_instance_id = create_ec2()
+                instance = create_ec2()
+                created_instance_id = instance.id
+                # created_instance_ip = instance.public_ip_address
                 memcache_id = x + curr_node_count
-                memcache_list[memcache_id] = created_instance_id
+                memcache_list[memcache_id] = instance
+                
+                cursor = cnx.cursor()
+                query = ''' INSERT INTO memcachelist(MemcacheID, InstanceID, PublicIP)
+                            VALUES(%s, %s, %s)'''
+                cursor.execute(query, (memcache_id, created_instance_id, 'waiting'))
+                cnx.commit()
+            for x in range (new_node_count - curr_node_count):
+                memcache_id = x + curr_node_count
+                instance = memcache_list[memcache_id]
+                instance.wait_until_running()
+                instance.reload()
+                created_instance_ip = instance.public_ip_address
 
                 cursor = cnx.cursor()
-                query = ''' INSERT INTO memcachelist(memcacheID, instanceID, publicIP)
-                            VALUES(%s, %s, %s)'''
-                cursor.execute(query, (memcache_id, created_instance_id, 'not implemented'))
+                query = ''' UPDATE Memcachelist
+                            SET PublicIP = %s
+                            WHERE MemcacheID = %s'''
+                cursor.execute(query, (created_instance_ip, memcache_id))
                 cnx.commit()
+
             return "memcache pool size increment is successful!"
 
         elif new_node_count < curr_node_count:
             for x in range (curr_node_count - new_node_count):
                 memcache_id = curr_node_count - 1 - x
-                deleted_instance_id = memcache_list[memcache_id]
+                deleted_instance_id = memcache_list[memcache_id].id
                 delete_ec2(deleted_instance_id)
                 memcache_list.pop(memcache_id)
 
                 cursor = cnx.cursor()
-                query = ''' DELETE FROM memcachelist
-                            WHERE memcacheID = %s'''
+                query = ''' DELETE FROM Memcachelist
+                            WHERE MemcacheID = %s'''
                 cursor.execute(query, (memcache_id,))
                 cnx.commit()
             return "memcache pool size decrement is successful!"
