@@ -7,11 +7,13 @@ from app.config import db_config
 import mysql.connector
 
 import math
+import time
 from datetime import datetime
 import threading
 
 # Autoscaler Status Variables
 AUTO_SCALER_ENABLE = False
+AUTO_SCALER_CHECK_SIGN_INTERVAL = 5
 
 max_miss_rate_threshold = 0.8
 min_miss_rate_threshold = 0.2
@@ -20,7 +22,7 @@ expand_ratio = 2
 shrink_ratio = 0.5
 
 # come from cloudwatch
-miss_rate = 0
+miss_rate = 0.5
 
 
 # database prepare & connect
@@ -81,26 +83,18 @@ def operate_instances(delta_of_instances=0):
         print("Don't need to adjust instances!")
 
 
-# def autoscaler_mode_change():
-    # to be down
-    # 不能用while，占用线程
-    # if AUTO_SCALER_ENABLE:
-    #     # while 打头
-    #     # step 1： 每分钟获取miss rate
-    #     # step 2： 调整scale
-    #     # step 3： 等待1min
-    #     # 把上面的封装成1个函数，用线程
-    # else:
-    #     # 关闭上面auto线程
-    #     # check 标志位（被动）
+def autoscaler_mode_change():
+    while AUTO_SCALER_ENABLE:
+        print("The auto scaler is running in auto model.")
+        # step 1： get miss rate from CloudWatch API
+        # step 2： just instances
+        # delta_of_instances = get_instance_change(miss_rate=miss_rate)
+        # operate_instances(delta_of_instances)
+        # step 3： wait 1 min
+        time.sleep(AUTO_SCALER_CHECK_SIGN_INTERVAL)
 
-    # while AUTO_SCALER_ENABLE:
-    #     # listen miss rate
-    #     delta_of_instances = get_instance_change(miss_rate)
-    #     operate_instances(delta_of_instances)
-    # check AUTO_SCALER_ENABLE变化
 
-    # 线程持续启动，靠里面的标志位决定
+threading.Thread(target=autoscaler_mode_change(), daemon=True).start()
 
 
 @webapp_autoscaler.route('/')
