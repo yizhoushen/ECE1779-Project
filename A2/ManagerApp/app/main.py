@@ -43,6 +43,11 @@ def teardown_db(exception):
 # global
 new_node_count = 0
 memcache_list = {0: 'i-0b71b0a8514c4a69d (does not matter)'}
+user_data = '''#!/bin/bash
+cd /home/ubuntu/ECE1779-Project
+source venv/bin/activate
+cd A2
+bash start.sh'''
 
 def create_ec2():
     ec2 = boto3.resource('ec2')
@@ -51,7 +56,8 @@ def create_ec2():
         MinCount=1,
         MaxCount=1,
         InstanceType="t2.micro",
-        KeyName="ece1779-2nd-acc"
+        KeyName="ece1779-2nd-acc",
+        UserData=user_data
     )
     instance = instances[0]
     return instance
@@ -228,31 +234,6 @@ def resize_mem_cache():
             return "Set manual mode failed!"
         else:
             return "Failed to get repsonse from autoscaler/set_autoscaler_to_manual_mode"
-            
-        # memcache node 1 (port 5001) is always active since the minium number of memcache is 1
-        # send activate/deactivate request to the rest (port 5004 - 5010)
-        # for x in range(new_node_count - 1):
-        #     response = requests.post("http://127.0.0.1:500{}/activate".format(x+4), timeout=5)
-        #     res_json = response.json()
-        #     if res_json['success'] == 'True':
-        #         pass
-        #     elif res_json['success'] == 'False':
-        #         return "Activate memcache node {} failed!".format(x+2)
-        #     else:
-        #         return "Failed to get repsonse from memcache {}".format(x+2)
-        # for x in range(8 - new_node_count):
-        #     response = requests.post("http://127.0.0.1:500{}/deactivate".format(x+3+new_node_count), timeout=5)
-        #     res_json = response.json()
-        #     if res_json['success'] == 'True':
-        #         pass
-        #     elif res_json['success'] == 'False':
-        #         return "Deactivate memcache node {} failed!".format(x+1+new_node_count)
-        #     else:
-        #         return "Failed to get repsonse from memcache {}".format(x+1+new_node_count)
-
-        # return "Resizing memcache pool is successful!"
-
-        # return "new_memcache_node_count: {}".format(new_node_count)
 
         cnx = get_db()
 
@@ -260,7 +241,6 @@ def resize_mem_cache():
             for x in range (new_node_count - curr_node_count):
                 instance = create_ec2()
                 created_instance_id = instance.id
-                # created_instance_ip = instance.public_ip_address
                 memcache_id = x + curr_node_count
                 memcache_list[memcache_id] = instance
                 
