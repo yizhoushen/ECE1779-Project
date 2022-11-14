@@ -217,3 +217,5 @@ def get_curr_autoscaler_status():
                               }
     response = jsonify(message=curr_autoscaler_status)
     return response
+
+

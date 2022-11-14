@@ -15,6 +15,12 @@ from flask import jsonify, request
 from flask import json
 from flask import render_template
 
+# A2
+import boto3
+import cloudwatch
+import socket
+from botocore.exceptions import ClientError
+
 SECONDS_WRITING_2DB_INTERVAL = 60 * 60
 
 
@@ -214,8 +220,30 @@ class PicMemCache(object):
 
             time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
+    def send_missrate_2CoudWatch(self):
+        response = cloudwatch.put_metric_data(
+            Namespace='instance_miss_rate',
+            MetricData=[
+                {
+                    'MetricName': 'single_miss_rate',
+                    'Dimensions': [
+                        {
+                            'Name': 'instance-id',
+                            'Value': 'string'
+                        },
+                    ],
+                    'Timestamp': datetime(2015, 1, 1),
+                    'Value': -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
+                    'Counts': [
+                        1,
+                    ],
+                    'Unit': 'Percent' | 'None',
+                },
+            ]
+        )
+        return response
 
-# following for test
+
 memory1 = PicMemCache()
 threading.Thread(target=memory1.write_statistics_2db, daemon=True).start()
 
@@ -310,5 +338,10 @@ def refreshConfiguration():
 
 
 @webapp_memcache.route('/', methods=['GET'])
+def main():
+    return render_template("memcache_view.html", memory1=memory1)
+
+
+@webapp_memcache.route('/send_', methods=['GET'])
 def main():
     return render_template("memcache_view.html", memory1=memory1)
