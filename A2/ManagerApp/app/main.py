@@ -43,6 +43,7 @@ def teardown_db(exception):
 # global
 new_node_count = 0
 memcache_id_list = {}
+memcache_ip_list = {}
 user_data = '''#!/bin/bash
 cd /home/ubuntu/ECE1779-Project
 source venv/bin/activate
@@ -112,6 +113,15 @@ def statistics():
 
 @webapp_manager.route('/config_form', methods=['GET'])
 def config_form():
+    cnx = get_db()
+    cursor = cnx.cursor()
+    query = ''' SELECT MemcacheID, PublicIP FROM memcachelist '''
+    cursor.execute(query)
+    for row in cursor:
+        memcache_id = row[0]
+        instance_ip = row[1]
+        memcache_ip_list[memcache_id] = instance_ip
+    print("memcache_ip_list: {}".format(memcache_ip_list))
     return render_template("config_form.html", title="Configure Memory Cache")
 
 @webapp_manager.route('/config_mem_cache', methods=['POST'])
@@ -143,22 +153,48 @@ def config_mem_cache():
         cursor.execute(query, (memcache_szie, int(memcache_policy)))
         cnx.commit()
 
-        response = requests.post("http://127.0.0.1:5001/refreshConfiguration", timeout=5)
-        res_json = response.json()
-        if res_json['success'] == 'True':
-            return "Cache configuration is successful"
-        elif res_json['success'] == 'False':
-            return "Cache configuration failed!"
-        else:
-            return "Failed to get repsonse from memcache/refreshConfiguration"
+        for memcache_id in memcache_ip_list:
+            if memcache_ip_list[memcache_id] == 'current runing public ip':
+                response = requests.post("http://127.0.0.1:5001/refreshConfiguration", timeout=5)
+                res_json = response.json()
+                if res_json['success'] == 'True':
+                    pass
+                elif res_json['success'] == 'False':
+                    return "Cache 0 configuration failed!"
+                else:
+                    return "Failed to get repsonse from memcache/refreshConfiguration"
+            else:
+                response = requests.post("http://{}:5001/refreshConfiguration".format(memcache_ip_list[memcache_id]), timeout=5)
+                res_json = response.json()
+                if res_json['success'] == 'True':
+                    pass
+                elif res_json['success'] == 'False':
+                    return "Cache configuration from ip {} failed!".format(memcache_ip_list[memcache_id])
+                else:
+                    return "Failed to get repsonse from {} memcache/refreshConfiguration".format(memcache_ip_list[memcache_id])
+        return "Cache configuration is successful! "
 
     elif 'cache_clear' in request.form and 'cache_configure' not in request.form:
-        response = requests.post("http://127.0.0.1:5001/clear", timeout=5)
-        res_json = response.json()
-        if res_json['success'] == 'True':
-            return "Cache Cleared"
-        else:
-            return "Failed to get repsonse from memcache/clear"
+        for memcache_id in memcache_ip_list:
+            if memcache_ip_list[memcache_id] == 'current runing public ip':
+                response = requests.post("http://127.0.0.1:5001/clear", timeout=5)
+                res_json = response.json()
+                if res_json['success'] == 'True':
+                    pass
+                elif res_json['success'] == 'False':
+                    return "Cache 0 clear failed!"
+                else:
+                    return "Failed to get repsonse from memcache/clear"
+            else:
+                response = requests.post("http://{}:5001/clear".format(memcache_ip_list[memcache_id]), timeout=5)
+                res_json = response.json()
+                if res_json['success'] == 'True':
+                    pass
+                elif res_json['success'] == 'False':
+                    return "Cache clear from ip {} failed!".format(memcache_ip_list[memcache_id])
+                else:
+                    return "Failed to get repsonse from {} memcache/clear".format(memcache_ip_list[memcache_id])
+        return "Cache clear is successful! "
 
     else:
         return "Invalid! Please choose cache configure or cache clear"
@@ -327,7 +363,7 @@ def delet_all_data():
             if res_json['success'] == 'True':
                 pass
             elif res_json['success'] == 'False':
-                return "Cache from ip {} clear failed!".format(curr_ip)
+                return "Cache clear from ip {} failed!".format(curr_ip)
             else:
                 return "Failed to get repsonse from {} memcache/clear".format(curr_ip)
     
