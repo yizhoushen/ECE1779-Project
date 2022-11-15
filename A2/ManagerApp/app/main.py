@@ -42,7 +42,7 @@ def teardown_db(exception):
 
 # global
 new_node_count = 0
-memcache_list = {0: 'i-0b71b0a8514c4a69d (does not matter)'}
+memcache_id_list = {}
 user_data = '''#!/bin/bash
 cd /home/ubuntu/ECE1779-Project
 source venv/bin/activate
@@ -150,7 +150,7 @@ def config_mem_cache():
         elif res_json['success'] == 'False':
             return "Cache configuration failed!"
         else:
-            return "Failed to get repsonse from memcache/clear"
+            return "Failed to get repsonse from memcache/refreshConfiguration"
 
     elif 'cache_clear' in request.form and 'cache_configure' not in request.form:
         response = requests.post("http://127.0.0.1:5001/clear", timeout=5)
@@ -174,6 +174,14 @@ def resize_form():
     row = cursor.fetchone()
     global curr_node_count
     curr_node_count = row[0]
+
+    query = "SELECT MemcacheID, InstanceID FROM memcachelist"
+    cursor.execute(query)
+    for row in cursor:
+        memcache_id = row[0]
+        instance_id = row[1]
+        memcache_id_list[memcache_id] = instance_id
+
     return App.render(render_template("resize_form.html", title="Change Memory Cache Resize Mode", curr_node_count=curr_node_count, new_node_count=new_node_count))
 
 @webapp_manager.route('/resize_mem_cache', methods=['POST'])
@@ -238,11 +246,12 @@ def resize_mem_cache():
         cnx = get_db()
 
         if new_node_count > curr_node_count:
+            memcache_instance_list = {}
             for x in range (new_node_count - curr_node_count):
                 instance = create_ec2()
                 created_instance_id = instance.id
                 memcache_id = x + curr_node_count
-                memcache_list[memcache_id] = instance
+                memcache_instance_list[memcache_id] = instance
                 
                 cursor = cnx.cursor()
                 query = ''' INSERT INTO memcachelist(MemcacheID, InstanceID, PublicIP)
@@ -251,7 +260,7 @@ def resize_mem_cache():
                 cnx.commit()
             for x in range (new_node_count - curr_node_count):
                 memcache_id = x + curr_node_count
-                instance = memcache_list[memcache_id]
+                instance = memcache_instance_list[memcache_id]
                 instance.wait_until_running()
                 instance.reload()
                 created_instance_ip = instance.public_ip_address
@@ -268,9 +277,9 @@ def resize_mem_cache():
         elif new_node_count < curr_node_count:
             for x in range (curr_node_count - new_node_count):
                 memcache_id = curr_node_count - 1 - x
-                deleted_instance_id = memcache_list[memcache_id].id
+                deleted_instance_id = memcache_id_list[memcache_id]
                 delete_ec2(deleted_instance_id)
-                memcache_list.pop(memcache_id)
+                memcache_id_list.pop(memcache_id)
 
                 cursor = cnx.cursor()
                 query = ''' DELETE FROM Memcachelist
@@ -299,9 +308,8 @@ def delet_all_data():
     bucket = s3.Bucket(s3_bucket['name'])
     bucket.objects.all().delete()
     # clear contents in all memcache nodes
-    # todo
-
-    return '1'
+    
+    return 'success'
 
 @webapp_manager.route('/delete_memcache_nodes', methods=['POST'])
 def delet_memcache_nodes():
