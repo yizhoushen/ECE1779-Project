@@ -6,10 +6,10 @@
     <!-- <h1>Image Display</h1> -->
     {% if local_file %}
         <div>Getting from local file system</div>
-        <img src = 'data:;base64,{{encoded_string}}' />
+        <img src = 'data:image/jpeg;base64,{{encoded_string}}' />
     {% elif encoded_string %}
         <div>Getting from memory cache</div>
-        <img src = 'data:;base64,{{encoded_string}}' />
+        <img src = 'data:image/jpeg;base64,{{encoded_string}}' />
     {% endif %}
 
 {% endblock %}
