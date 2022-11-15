@@ -220,9 +220,9 @@ class PicMemCache(object):
 
             time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
-    def send_missrate_2CoudWatch(self):
+    def send_statistics_2CoudWatch(self):
         response = cloudwatch.put_metric_data(
-            Namespace='instance_miss_rate',
+            Namespace='statistical_variable_of_one_instance',
             MetricData=[
                 {
                     'MetricName': 'single_miss_rate',
@@ -232,13 +232,19 @@ class PicMemCache(object):
                             'Value': 'string'
                         },
                     ],
-                    'Timestamp': datetime(2015, 1, 1),
                     'Value': -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
-                    'Counts': [
-                        1,
-                    ],
-                    'Unit': 'Percent' | 'None',
                 },
+
+                {
+                    'MetricName': 'single_ItemNum',
+                    'Dimensions': [
+                        {
+                            'Name': 'instance-id',
+                            'Value': 'string'
+                        },
+                    ],
+                    'Value': self.ItemNum,
+                }
             ]
         )
         return response
