@@ -232,6 +232,7 @@ class PicMemCache(object):
                             'Value': 'string'
                         },
                     ],
+                    # default value should be 0 or 1
                     'Value': -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
                 },
 
@@ -347,7 +348,3 @@ def refreshConfiguration():
 def main():
     return render_template("memcache_view.html", memory1=memory1)
 
-
-@webapp_memcache.route('/send_', methods=['GET'])
-def main():
-    return render_template("memcache_view.html", memory1=memory1)
