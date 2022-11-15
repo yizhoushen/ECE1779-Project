@@ -308,6 +308,28 @@ def delet_all_data():
     bucket = s3.Bucket(s3_bucket['name'])
     bucket.objects.all().delete()
     # clear contents in all memcache nodes
+    query = ''' SELECT PublicIP FROM memcachelist '''
+    cursor.execute(query)
+    for row in cursor:
+        curr_ip = row[0]
+        if curr_ip == 'current runing public ip':
+            response = requests.post("http://127.0.0.1:5001/clear", timeout=5)
+            res_json = response.json()
+            if res_json['success'] == 'True':
+                pass
+            elif res_json['success'] == 'False':
+                return "Cache 0 clear failed!"
+            else:
+                return "Failed to get repsonse from memcache/clear"
+        else:
+            response = requests.post("http://{}:5001/clear".format(curr_ip), timeout=5)
+            res_json = response.json()
+            if res_json['success'] == 'True':
+                pass
+            elif res_json['success'] == 'False':
+                return "Cache from ip {} clear failed!".format(curr_ip)
+            else:
+                return "Failed to get repsonse from {} memcache/clear".format(curr_ip)
     
     return 'success'
 
