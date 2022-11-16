@@ -302,7 +302,7 @@ def resize_mem_cache():
                 created_instance_ip = instance.public_ip_address
 
                 cursor = cnx.cursor()
-                query = ''' UPDATE Memcachelist
+                query = ''' UPDATE memcachelist
                             SET PublicIP = %s
                             WHERE MemcacheID = %s'''
                 cursor.execute(query, (created_instance_ip, memcache_id))
@@ -318,7 +318,7 @@ def resize_mem_cache():
                 memcache_id_list.pop(memcache_id)
 
                 cursor = cnx.cursor()
-                query = ''' DELETE FROM Memcachelist
+                query = ''' DELETE FROM memcachelist
                             WHERE MemcacheID = %s'''
                 cursor.execute(query, (memcache_id,))
                 cnx.commit()
