@@ -1,4 +1,4 @@
-create database ece1779project;
+create database if not exists ece1779project;
 use ece1779project;
 
 show tables;
