@@ -4,7 +4,7 @@ from collections import OrderedDict
 from sys import getsizeof
 import random
 from datetime import datetime, timedelta
-
+import boto3
 # database
 import mysql.connector
 from app.config import db_config
@@ -22,6 +22,9 @@ import socket
 from botocore.exceptions import ClientError
 
 SECONDS_WRITING_2DB_INTERVAL = 60 * 60
+
+
+# SECONDS_WRITING_2DB_INTERVAL = 5  #for test
 
 
 # database prepare & connect
@@ -58,6 +61,15 @@ class PicMemCache(object):
         cursor.execute(sql_load_capacity)
         # self.memCacheCapacity = memCacheCapacity
         self.memCacheCapacity = cursor.fetchone()[0]
+
+        ## how to identify each memcache instance?
+        # sql_load_instanceID = "SELECT instanceID FROM memcachelist WHERE memcacheID = %s"
+        # cursor.execute(sql_load_instanceID, memcacheID)
+        # if not cursor.fetchone()[0]:
+        #     self.intance_id = cursor.fetchone()[0]
+        # else:
+        #     pass
+        self.instance_id = 'string'
 
         # Statistical variables
         self.drop_approach = 1
@@ -220,83 +232,91 @@ class PicMemCache(object):
 
             time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
-    # def send_statistics_2CoudWatch(self):
-    #     response = cloudwatch.put_metric_data(
-    #         Namespace='statistical_variable_of_one_instance',
-    #         MetricData=[
-    #             {
-    #                 'MetricName': 'single_ItemNum',
-    #                 'Dimensions': [
-    #                     {
-    #                         'Name': 'instance-id',
-    #                         'Value': 'string'
-    #                     },
-    #                 ],
-    #                 'Value': self.ItemNum,
-    #             },
-    #
-    #             {
-    #                 'MetricName': 'single_currentMemCache',
-    #                 'Dimensions': [
-    #                     {
-    #                         'Name': 'instance-id',
-    #                         'Value': 'string'
-    #                     },
-    #                 ],
-    #                 'Value': self.currentMemCache,
-    #             },
-    #
-    #             {
-    #                 'MetricName': 'single_TotalRequestNum',
-    #                 'Dimensions': [
-    #                     {
-    #                         'Name': 'instance-id',
-    #                         'Value': 'string'
-    #                     },
-    #                 ],
-    #                 'Value': self.TotalRequestNum,
-    #             },
-    #
-    #             {
-    #                 'MetricName': 'single_GetPicRequestNum',
-    #                 'Dimensions': [
-    #                     {
-    #                         'Name': 'instance-id',
-    #                         'Value': 'string'
-    #                     },
-    #                 ],
-    #                 'Value': self.GetPicRequestNum,
-    #             },
-    #
-    #             {
-    #                 'MetricName': 'single_miss_rate',
-    #                 'Dimensions': [
-    #                     {
-    #                         'Name': 'instance-id',
-    #                         'Value': 'string'
-    #                     },
-    #                 ],
-    #                 # default value should be 0 or 1
-    #                 'Value': -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
-    #             },
-    #
-    #             {
-    #                 'MetricName': 'single_hit_rate',
-    #                 'Dimensions': [
-    #                     {
-    #                         'Name': 'instance-id',
-    #                         'Value': 'string'
-    #                     },
-    #                 ],
-    #                 'Value': -1 if self.GetPicRequestNum == 0 else self.HitNum / self.GetPicRequestNum,
-    #             }
-    #         ]
-    #     )
-    #     return response
+
+
+    def send_statistics_2CoudWatch(self):
+        while True:
+            print("statistic report1: ", threading.current_thread().name)
+            print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            cloudwatch = boto3.client('cloudwatch')
+            cloudwatch.put_metric_data(
+                Namespace='statistical_variable_of_one_instance',
+                MetricData=[
+                    {
+                        'MetricName': 'single_ItemNum',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.instance_id
+                            },
+                        ],
+                        'Value': self.ItemNum,
+                    },
+
+                    {
+                        'MetricName': 'single_currentMemCache',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.instance_id
+                            },
+                        ],
+                        'Value': self.currentMemCache,
+                    },
+
+                    {
+                        'MetricName': 'single_TotalRequestNum',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.instance_id
+                            },
+                        ],
+                        'Value': self.TotalRequestNum,
+                    },
+
+                    {
+                        'MetricName': 'single_GetPicRequestNum',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.instance_id
+                            },
+                        ],
+                        'Value': self.GetPicRequestNum,
+                    },
+
+                    {
+                        'MetricName': 'single_miss_rate',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.instance_id
+                            },
+                        ],
+                        # default value should be 0 or 1
+                        'Value': -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
+                    },
+
+                    {
+                        'MetricName': 'single_hit_rate',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.instance_id
+                            },
+                        ],
+                        'Value': -1 if self.GetPicRequestNum == 0 else self.HitNum / self.GetPicRequestNum,
+                    }
+                ]
+            )
+            time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
 
 memory1 = PicMemCache()
-threading.Thread(target=memory1.write_statistics_2db, daemon=True).start()
+# threading.Thread(target=memory1.write_statistics_2db, daemon=True).start()
+threading.Thread(target=memory1.send_statistics_2CoudWatch, daemon=True).start()
+# threading.Thread(target=memory1.read_statistics_2CoudWatch, daemon=True).start()
 
 
 # for i in range(60):
@@ -391,4 +411,3 @@ def refreshConfiguration():
 @webapp_memcache.route('/', methods=['GET'])
 def main():
     return render_template("memcache_view.html", memory1=memory1)
-
