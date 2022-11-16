@@ -220,35 +220,79 @@ class PicMemCache(object):
 
             time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
-    def send_statistics_2CoudWatch(self):
-        response = cloudwatch.put_metric_data(
-            Namespace='statistical_variable_of_one_instance',
-            MetricData=[
-                {
-                    'MetricName': 'single_miss_rate',
-                    'Dimensions': [
-                        {
-                            'Name': 'instance-id',
-                            'Value': 'string'
-                        },
-                    ],
-                    # default value should be 0 or 1
-                    'Value': -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
-                },
-
-                {
-                    'MetricName': 'single_ItemNum',
-                    'Dimensions': [
-                        {
-                            'Name': 'instance-id',
-                            'Value': 'string'
-                        },
-                    ],
-                    'Value': self.ItemNum,
-                }
-            ]
-        )
-        return response
+    # def send_statistics_2CoudWatch(self):
+    #     response = cloudwatch.put_metric_data(
+    #         Namespace='statistical_variable_of_one_instance',
+    #         MetricData=[
+    #             {
+    #                 'MetricName': 'single_ItemNum',
+    #                 'Dimensions': [
+    #                     {
+    #                         'Name': 'instance-id',
+    #                         'Value': 'string'
+    #                     },
+    #                 ],
+    #                 'Value': self.ItemNum,
+    #             },
+    #
+    #             {
+    #                 'MetricName': 'single_currentMemCache',
+    #                 'Dimensions': [
+    #                     {
+    #                         'Name': 'instance-id',
+    #                         'Value': 'string'
+    #                     },
+    #                 ],
+    #                 'Value': self.currentMemCache,
+    #             },
+    #
+    #             {
+    #                 'MetricName': 'single_TotalRequestNum',
+    #                 'Dimensions': [
+    #                     {
+    #                         'Name': 'instance-id',
+    #                         'Value': 'string'
+    #                     },
+    #                 ],
+    #                 'Value': self.TotalRequestNum,
+    #             },
+    #
+    #             {
+    #                 'MetricName': 'single_GetPicRequestNum',
+    #                 'Dimensions': [
+    #                     {
+    #                         'Name': 'instance-id',
+    #                         'Value': 'string'
+    #                     },
+    #                 ],
+    #                 'Value': self.GetPicRequestNum,
+    #             },
+    #
+    #             {
+    #                 'MetricName': 'single_miss_rate',
+    #                 'Dimensions': [
+    #                     {
+    #                         'Name': 'instance-id',
+    #                         'Value': 'string'
+    #                     },
+    #                 ],
+    #                 # default value should be 0 or 1
+    #                 'Value': -1 if self.GetPicRequestNum == 0 else self.MissNum / self.GetPicRequestNum,
+    #             },
+    #
+    #             {
+    #                 'MetricName': 'single_hit_rate',
+    #                 'Dimensions': [
+    #                     {
+    #                         'Name': 'instance-id',
+    #                         'Value': 'string'
+    #                     },
+    #                 ],
+    #                 'Value': -1 if self.GetPicRequestNum == 0 else self.HitNum / self.GetPicRequestNum,
+    #             }
+    #         ]
+    #     )
+    #     return response
 
 
 memory1 = PicMemCache()
