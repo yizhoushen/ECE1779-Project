@@ -154,46 +154,26 @@ def config_mem_cache():
         cnx.commit()
 
         for memcache_id in memcache_ip_list:
-            if memcache_ip_list[memcache_id] == 'current runing public ip':
-                response = requests.post("http://127.0.0.1:5001/refreshConfiguration", timeout=5)
-                res_json = response.json()
-                if res_json['success'] == 'True':
-                    pass
-                elif res_json['success'] == 'False':
-                    return "Cache 0 configuration failed!"
-                else:
-                    return "Failed to get repsonse from memcache/refreshConfiguration"
+            response = requests.post("http://{}:5001/refreshConfiguration".format(memcache_ip_list[memcache_id]), timeout=5)
+            res_json = response.json()
+            if res_json['success'] == 'True':
+                pass
+            elif res_json['success'] == 'False':
+                return "Cache configuration from ip {} failed!".format(memcache_ip_list[memcache_id])
             else:
-                response = requests.post("http://{}:5001/refreshConfiguration".format(memcache_ip_list[memcache_id]), timeout=5)
-                res_json = response.json()
-                if res_json['success'] == 'True':
-                    pass
-                elif res_json['success'] == 'False':
-                    return "Cache configuration from ip {} failed!".format(memcache_ip_list[memcache_id])
-                else:
-                    return "Failed to get repsonse from {} memcache/refreshConfiguration".format(memcache_ip_list[memcache_id])
+                return "Failed to get repsonse from {} memcache/refreshConfiguration".format(memcache_ip_list[memcache_id])
         return "Cache configuration is successful! "
 
     elif 'cache_clear' in request.form and 'cache_configure' not in request.form:
         for memcache_id in memcache_ip_list:
-            if memcache_ip_list[memcache_id] == 'current runing public ip':
-                response = requests.post("http://127.0.0.1:5001/clear", timeout=5)
-                res_json = response.json()
-                if res_json['success'] == 'True':
-                    pass
-                elif res_json['success'] == 'False':
-                    return "Cache 0 clear failed!"
-                else:
-                    return "Failed to get repsonse from memcache/clear"
+            response = requests.post("http://{}:5001/clear".format(memcache_ip_list[memcache_id]), timeout=5)
+            res_json = response.json()
+            if res_json['success'] == 'True':
+                pass
+            elif res_json['success'] == 'False':
+                return "Cache clear from ip {} failed!".format(memcache_ip_list[memcache_id])
             else:
-                response = requests.post("http://{}:5001/clear".format(memcache_ip_list[memcache_id]), timeout=5)
-                res_json = response.json()
-                if res_json['success'] == 'True':
-                    pass
-                elif res_json['success'] == 'False':
-                    return "Cache clear from ip {} failed!".format(memcache_ip_list[memcache_id])
-                else:
-                    return "Failed to get repsonse from {} memcache/clear".format(memcache_ip_list[memcache_id])
+                return "Failed to get repsonse from {} memcache/clear".format(memcache_ip_list[memcache_id])
         return "Cache clear is successful! "
 
     else:
@@ -205,7 +185,7 @@ def resize_form():
     # curr_node_count = get_memcache_count()
     cnx = get_db()
     cursor = cnx.cursor()
-    query_get_memcache_count = '''SELECT COUNT(memcacheID) FROM memcachelist'''
+    query_get_memcache_count = '''SELECT COUNT(MemcacheID) FROM memcachelist'''
     cursor.execute(query_get_memcache_count)
     row = cursor.fetchone()
     global curr_node_count
@@ -348,24 +328,14 @@ def delet_all_data():
     cursor.execute(query)
     for row in cursor:
         curr_ip = row[0]
-        if curr_ip == 'current runing public ip':
-            response = requests.post("http://127.0.0.1:5001/clear", timeout=5)
-            res_json = response.json()
-            if res_json['success'] == 'True':
-                pass
-            elif res_json['success'] == 'False':
-                return "Cache 0 clear failed!"
-            else:
-                return "Failed to get repsonse from memcache/clear"
+        response = requests.post("http://{}:5001/clear".format(curr_ip), timeout=5)
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            pass
+        elif res_json['success'] == 'False':
+            return "Cache clear from ip {} failed!".format(curr_ip)
         else:
-            response = requests.post("http://{}:5001/clear".format(curr_ip), timeout=5)
-            res_json = response.json()
-            if res_json['success'] == 'True':
-                pass
-            elif res_json['success'] == 'False':
-                return "Cache clear from ip {} failed!".format(curr_ip)
-            else:
-                return "Failed to get repsonse from {} memcache/clear".format(curr_ip)
+            return "Failed to get repsonse from {} memcache/clear".format(curr_ip)
     
     return 'success'
 

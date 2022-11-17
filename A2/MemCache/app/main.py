@@ -63,8 +63,8 @@ class PicMemCache(object):
         self.memCacheCapacity = cursor.fetchone()[0]
 
         ## how to identify each memcache instance?
-        # sql_load_instanceID = "SELECT instanceID FROM memcachelist WHERE memcacheID = %s"
-        # cursor.execute(sql_load_instanceID, memcacheID)
+        # sql_load_instanceID = "SELECT instanceID FROM memcachelist WHERE MemcacheID = %s"
+        # cursor.execute(sql_load_instanceID, (MemcacheID,))
         # if not cursor.fetchone()[0]:
         #     self.intance_id = cursor.fetchone()[0]
         # else:
