@@ -51,7 +51,7 @@ PublicIP text NOT NULL,
 PRIMARY KEY(MemcacheID)
 );
 
-INSERT INTO memcachelist VALUES(0, 'current runing instance id', 'current runing public ip');
+INSERT INTO memcachelist VALUES(0, 'current runing instance id', '127.0.0.1');
 
 -- INSERT INTO statistics
 -- VALUES(

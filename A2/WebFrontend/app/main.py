@@ -1,8 +1,9 @@
 
 from flask import render_template, url_for, request, g
 from app import webapp
-from flask import json
+from flask import jsonify
 from datetime import datetime, timedelta
+from collections import OrderedDict
 
 import mysql.connector
 from app.config import db_config, ami_id, subnet_id, s3_bucket
@@ -37,6 +38,9 @@ def get_db():
         db = g._database = connect_to_database()
     return db
 
+
+memcache_track = OrderedDict()
+
 @webapp.teardown_appcontext
 def teardown_db(exception):
     db = getattr(g, '_database', None)
@@ -69,17 +73,37 @@ def image_upload():
     if new_image.filename == '':
         return 'Missing file name'
     
+    # invalidate key in memcache_track
+    if new_key in memcache_track.keys():
+        memcache_track.pop(new_key)
+
+    node_count = 0
+    memcache_ip_list = {}
+    cnx = get_db()
+    cursor = cnx.cursor()
+    query = ''' SELECT MemcacheID, PublicIP FROM memcachelist '''
+    cursor.execute(query)
+    for row in cursor:
+        memcache_id = row[0]
+        public_ip = row[1]
+        memcache_ip_list[memcache_id] = public_ip
+        node_count = node_count + 1
+
     # get md5 hash
-    new_key_md5 = hashlib.md5(new_key.encode())
-    partition = new_key_md5.hexdigest()[0]
+    image_key_md5 = hashlib.md5(new_key.encode())
+    print("upload md5 hashing: {}".format(image_key_md5.hexdigest()))
+    partition = image_key_md5.hexdigest()[0]
+    node_ip = memcache_ip_list[int(partition, base=16) % node_count]
+    print("upload node_ip: {}".format(node_ip))      
 
     # invilidate memcache
-
-    # todo: route request to memcache node based on partition
-
     data = {'key': new_key}
-    response = requests.post("http://127.0.0.1:5001/invalidateKey", data=data, timeout=5)
-    print(response.text)
+    response = requests.post("http://{}:5001/invalidateKey".format(node_ip), data=data, timeout=5)
+    res_json = response.json()
+    if res_json['success'] == 'True':
+        pass
+    else:
+        return "Failed to invalidate key in memcache from ip {}".format(node_ip)
     
     # Save key and path to database
     s = new_image.filename.split(".")
@@ -122,9 +146,28 @@ def image_display():
     if image_key == '':
         return "Need a image key"
 
+    node_count = 0
+    memcache_ip_list = {}
+    cnx = get_db()
+    cursor = cnx.cursor()
+    query = ''' SELECT MemcacheID, PublicIP FROM memcachelist '''
+    cursor.execute(query)
+    for row in cursor:
+        memcache_id = row[0]
+        public_ip = row[1]
+        memcache_ip_list[memcache_id] = public_ip
+        node_count = node_count + 1
+
+    # get md5 hash
+    image_key_md5 = hashlib.md5(image_key.encode())
+    print("display md5 hashing: {}".format(image_key_md5.hexdigest()))
+    partition = image_key_md5.hexdigest()[0]
+    node_ip = memcache_ip_list[int(partition, base=16) % node_count]
+    print("display node_ip: {}".format(node_ip))        
+
     # first try getting from memcache
     data = {'key': image_key}
-    response = requests.post("http://127.0.0.1:5001/get", data=data, timeout=5)
+    response = requests.post("http://{}:5001/get".format(node_ip), data=data, timeout=5)
     print("response type from memcache/get: {}".format(type(response.json())))
     res_json = response.json()
 
@@ -135,6 +178,11 @@ def image_display():
         duration = (read_end - read_start) * 1000
         print("time used for reading from memcache: {}".format(duration))
         print("Getting from memory cache: \n {}".format(encoded_string[:10]))
+
+        # save key_value in memcache_track
+        memcache_track[image_key] = encoded_string
+        memcache_track.move_to_end(key=image_key, last=True)
+
         return render_template("image_display.html", title="Image Display", encoded_string=encoded_string)
     else:
         print("No Such image in memcache, getting from local file system...")
@@ -156,10 +204,14 @@ def image_display():
         image_file = s3.get_object(Bucket=s3_bucket['name'], Key=image_path)['Body'].read()
         encoded_string = base64.b64encode(image_file).decode('utf-8')
         print("Getting from local file system: \n {}".format(encoded_string[:10]))
-        
+
+        # save key_value in memcache_track
+        memcache_track[image_key] = encoded_string
+        memcache_track.move_to_end(key=image_key, last=True)
+
         # save image to memcache
         data = {'key': image_key, 'value': encoded_string}
-        response = requests.post("http://127.0.0.1:5001/put_kv", data=data, timeout=5)
+        response = requests.post("http://{}:5001/put_kv".format(node_ip), data=data, timeout=5)
         res_json = response.json()
         if res_json['success'] == 'True':
             read_end = time.time()
@@ -184,6 +236,46 @@ def all_keys():
 def testpath():
     temp_path = os.path.abspath("./temp_path")
     return temp_path
+
+@webapp.route('/redistribute', methods=['POST'])
+def redistribute():
+    node_count = 0
+    memcache_ip_list = {}
+    cnx = get_db()
+    cursor = cnx.cursor()
+    query = ''' SELECT MemcacheID, PublicIP FROM memcachelist '''
+    cursor.execute(query)
+    for row in cursor:
+        memcache_id = row[0]
+        public_ip = row[1]
+        memcache_ip_list[memcache_id] = public_ip
+        node_count = node_count + 1
+    
+    for key, value in memcache_track.items():
+        image_key_md5 = hashlib.md5(key.encode())
+        partition = image_key_md5.hexdigest()[0]
+        node_ip = memcache_ip_list[int(partition, base=16) % node_count]
+        key = {'key': key}
+        keyvalue = {'key': key, 'value': value}
+        for memcache_id in memcache_ip_list:
+            if memcache_ip_list[memcache_id] == node_ip:
+                response = requests.post("http://{}:5001/put_kv".format(node_ip), data=keyvalue, timeout=5)
+                res_json = response.json()
+                if res_json['success'] == 'True':
+                    pass
+                else:
+                    message = 'Failed to get repsonse from memcache/put_kv from ip {}'.format(node_ip)
+                    return jsonify(success='False', message=message) 
+            else:
+                response = requests.post("http://{}:5001/invalidateKey".format(node_ip), data=key, timeout=5)
+                res_json = response.json()
+                if res_json['success'] == 'True':
+                    pass
+                else:
+                    message = 'Failed to invalidate key in memcache from ip {}'.format(node_ip)
+                    return jsonify(success='False', message=message) 
+    
+    return jsonify(success='True')
 
 # @webapp.route('/api_test', methods=['POST', 'GET'])
 # def test_api():
