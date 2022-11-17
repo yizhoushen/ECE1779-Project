@@ -6,8 +6,8 @@
 #              'database': 'ece1779project'}
 
 # config of local database
-db_config = {'user': 'dbadmin',
-             'password': 'admin1234',
+db_config = {'user': 'root',
+             'password': '301415',
              'host': '127.0.0.1',
              'database': 'ece1779project'}
 
@@ -26,4 +26,4 @@ db_config = {'user': 'dbadmin',
 ami_id = '<AMI ID>'
 subnet_id = '<Subnet ID>'
 
-s3_bucket = {'name': 'bucket-ece1779-project-new'}
+s3_bucket = {'name': 'ece1779bucket.w6'}
