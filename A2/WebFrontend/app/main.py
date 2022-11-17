@@ -1,7 +1,7 @@
 
 from flask import render_template, url_for, request, g
 from app import webapp
-from flask import json
+from flask import jsonify
 from datetime import datetime, timedelta
 from collections import OrderedDict
 
@@ -99,7 +99,11 @@ def image_upload():
     # invilidate memcache
     data = {'key': new_key}
     response = requests.post("http://{}:5001/invalidateKey".format(node_ip), data=data, timeout=5)
-    print(response.text)
+    res_json = response.json()
+    if res_json['success'] == 'True':
+        pass
+    else:
+        return "Failed to invalidate key in memcache from ip {}".format(node_ip)
     
     # Save key and path to database
     s = new_image.filename.split(".")
@@ -232,6 +236,46 @@ def all_keys():
 def testpath():
     temp_path = os.path.abspath("./temp_path")
     return temp_path
+
+@webapp.route('/redistribute', methods=['POST'])
+def redistribute():
+    node_count = 0
+    memcache_ip_list = {}
+    cnx = get_db()
+    cursor = cnx.cursor()
+    query = ''' SELECT MemcacheID, PublicIP FROM memcachelist '''
+    cursor.execute(query)
+    for row in cursor:
+        memcache_id = row[0]
+        public_ip = row[1]
+        memcache_ip_list[memcache_id] = public_ip
+        node_count = node_count + 1
+    
+    for key, value in memcache_track.items():
+        image_key_md5 = hashlib.md5(key.encode())
+        partition = image_key_md5.hexdigest()[0]
+        node_ip = memcache_ip_list[int(partition, base=16) % node_count]
+        key = {'key': key}
+        keyvalue = {'key': key, 'value': value}
+        for memcache_id in memcache_ip_list:
+            if memcache_ip_list[memcache_id] == node_ip:
+                response = requests.post("http://{}:5001/put_kv".format(node_ip), data=keyvalue, timeout=5)
+                res_json = response.json()
+                if res_json['success'] == 'True':
+                    pass
+                else:
+                    message = 'Failed to get repsonse from memcache/put_kv from ip {}'.format(node_ip)
+                    return jsonify(success='False', message=message) 
+            else:
+                response = requests.post("http://{}:5001/invalidateKey".format(node_ip), data=key, timeout=5)
+                res_json = response.json()
+                if res_json['success'] == 'True':
+                    pass
+                else:
+                    message = 'Failed to invalidate key in memcache from ip {}'.format(node_ip)
+                    return jsonify(success='False', message=message) 
+    
+    return jsonify(success='True')
 
 # @webapp.route('/api_test', methods=['POST', 'GET'])
 # def test_api():
