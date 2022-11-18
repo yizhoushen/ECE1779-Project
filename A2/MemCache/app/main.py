@@ -379,7 +379,6 @@ class PicMemCache(object):
                                 'Value': self.instance_id
                             },
                         ],
-                        # default value should be 0 or 1
                         'Value': miss_rate,
                     },
 
