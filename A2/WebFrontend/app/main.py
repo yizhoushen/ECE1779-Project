@@ -260,30 +260,45 @@ def redistribute():
         node_count = node_count + 1
     
     for key, value in memcache_track.items():
-        image_key_md5 = hashlib.md5(key.encode())
-        partition = image_key_md5.hexdigest()[0]
+        print("memcache_track key: {} ".format(key))
+        print("memcache_track value: {}".format(value[:10]))
+        image_key_md5 = hashlib.md5(key.encode()).hexdigest()
+        if len(image_key_md5) == 31:
+            partition = 0
+        else:
+            partition = image_key_md5[0]
         node_ip = memcache_ip_list[int(partition, base=16) % node_count]
-        key = {'key': key}
-        keyvalue = {'key': key, 'value': value}
+        print("target node ip: {}".format(node_ip))
+        key_to_invalid = {'key': key}
+        key_value = {'key': key, 'value': value}
         for memcache_id in memcache_ip_list:
+            print("memcache id: {}".format(memcache_id))
+            print("public ip: {}".format(memcache_ip_list[memcache_id]))
             if memcache_ip_list[memcache_id] == node_ip:
-                response = requests.post("http://{}:5001/put_kv".format(node_ip), data=keyvalue, timeout=5)
+                print("a")
+                response = requests.post("http://{}:5001/put_kv".format(memcache_ip_list[memcache_id]), data=key_value, timeout=5)
                 res_json = response.json()
+                print("aaaa")
                 if res_json['success'] == 'True':
                     pass
                 else:
-                    message = 'Failed to get repsonse from memcache/put_kv from ip {}'.format(node_ip)
-                    return jsonify(success='False', message=message) 
+                    message = 'Failed to get repsonse from memcache/put_kv from ip {}'.format(memcache_ip_list[memcache_id])
+                    res = jsonify(success='False', message=message) 
+                    return res
             else:
-                response = requests.post("http://{}:5001/invalidateKey".format(node_ip), data=key, timeout=5)
+                print("b")
+                response = requests.post("http://{}:5001/invalidateKey".format(memcache_ip_list[memcache_id]), data=key_to_invalid, timeout=5)
                 res_json = response.json()
+                print("bbbb")
                 if res_json['success'] == 'True':
                     pass
                 else:
-                    message = 'Failed to invalidate key in memcache from ip {}'.format(node_ip)
-                    return jsonify(success='False', message=message) 
-    
-    return jsonify(success='True')
+                    message = 'Failed to invalidate key in memcache from ip {}'.format(memcache_ip_list[memcache_id])
+                    res = jsonify(success='False', message=message)
+                    return res
+            time.sleep(1)
+    res = jsonify(success='True')
+    return res
 
 # @webapp.route('/api_test', methods=['POST', 'GET'])
 # def test_api():
