@@ -89,10 +89,15 @@ def image_upload():
         memcache_ip_list[memcache_id] = public_ip
         node_count = node_count + 1
 
+    print("node count: {}".format(node_count))
     # get md5 hash
-    image_key_md5 = hashlib.md5(new_key.encode())
-    print("upload md5 hashing: {}".format(image_key_md5.hexdigest()))
-    partition = image_key_md5.hexdigest()[0]
+    image_key_md5 = hashlib.md5(new_key.encode()).hexdigest()
+    print("upload md5 hashing: {}".format(image_key_md5))
+    if len(image_key_md5) == 31:
+        partition = 0
+    else:
+        partition = image_key_md5[0]
+    print("upload md5 partition: {}".format(partition))
     node_ip = memcache_ip_list[int(partition, base=16) % node_count]
     print("upload node_ip: {}".format(node_ip))      
 
@@ -159,9 +164,12 @@ def image_display():
         node_count = node_count + 1
 
     # get md5 hash
-    image_key_md5 = hashlib.md5(image_key.encode())
-    print("display md5 hashing: {}".format(image_key_md5.hexdigest()))
-    partition = image_key_md5.hexdigest()[0]
+    image_key_md5 = hashlib.md5(image_key.encode()).hexdigest()
+    print("display md5 hashing: {}".format(image_key_md5))
+    if len(image_key_md5) == 31:
+        partition = 0
+    else:
+        partition = image_key_md5[0]
     node_ip = memcache_ip_list[int(partition, base=16) % node_count]
     print("display node_ip: {}".format(node_ip))        
 
