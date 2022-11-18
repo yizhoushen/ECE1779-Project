@@ -21,10 +21,10 @@ import cloudwatch
 import socket
 from botocore.exceptions import ClientError
 
-# SECONDS_WRITING_2DB_INTERVAL = 60 * 60
+SECONDS_WRITING_2DB_INTERVAL = 60
 
 
-SECONDS_WRITING_2DB_INTERVAL = 5  #for test
+# SECONDS_WRITING_2DB_INTERVAL = 5  #for test
 
 
 # database prepare & connect
@@ -260,7 +260,7 @@ class PicMemCache(object):
         while True:
             print("statistic report2: ", threading.current_thread().name)
             cloudwatch = boto3.client('cloudwatch')
-            response = cloudwatch.get_metric_statistics(
+            cloudwatch_sum_miss_num = cloudwatch.get_metric_statistics(
                 Namespace='statistical_variable_of_one_instance',
                 MetricName='single_miss_num',
                 Dimensions=[
@@ -269,7 +269,7 @@ class PicMemCache(object):
                         'Value': self.instance_id
                     },
                 ],
-                StartTime=datetime.utcnow()-timedelta(seconds=2*60),
+                StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
                 EndTime=datetime.utcnow(),
                 Period=60,
                 Statistics=[
@@ -277,8 +277,40 @@ class PicMemCache(object):
                 ],
 
             )
+            # print(cloudwatch_sum_miss_num)
 
-            print(response)
+            cloudwatch_sum_GetPicRequestNum = cloudwatch.get_metric_statistics(
+                Namespace='statistical_variable_of_one_instance',
+                MetricName='single_GetPicRequestNum',
+                Dimensions=[
+                    {
+                        'Name': 'instance-id',
+                        'Value': self.instance_id
+                    },
+                ],
+                StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
+                EndTime=datetime.utcnow(),
+                Period=60,
+                Statistics=[
+                    'Sum',
+                ],
+
+            )
+            # print(cloudwatch_sum_GetPicRequestNum)
+
+            if len(cloudwatch_sum_miss_num['Datapoints']) == 0 or len(
+                    cloudwatch_sum_GetPicRequestNum['Datapoints']) == 0:
+                sum_miss_num = -2
+            else:
+                sum_miss_num = cloudwatch_sum_miss_num['Datapoints'][0]['Sum']
+                sum_GetPicRequestNum = cloudwatch_sum_GetPicRequestNum['Datapoints']['Sum']
+                if sum_GetPicRequestNum == 0:
+                    avg_miss_rate = -1
+                else:
+                    avg_miss_rate = sum_miss_num / sum_GetPicRequestNum
+                print("average miss rate: " + str(avg_miss_rate))
+            print("Miss number: " + str(sum_miss_num))
+
             time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
     def send_statistics_2CoudWatch(self):
