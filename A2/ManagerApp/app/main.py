@@ -288,14 +288,25 @@ def resize_mem_cache():
                             WHERE MemcacheID = %s'''
                 cursor.execute(query, (created_instance_ip, memcache_id))
                 cnx.commit()
-            # time.sleep(15)
-            # response = requests.post("http://127.0.0.1:5000/redistribute")
-            # res_json = response.json()
-            # if res_json['success'] == 'True':
-            #     return "memcache pool size increment is successful!"
-            # else:
-            #     return "memcache redistribution failed"
-            return "memcache pool size increment is successful!"
+
+            # check if the initialization has finished
+            response = None
+            last_instance_id = new_node_count - 1
+            last_ip = memcache_instance_list[last_instance_id].public_ip_address
+            print("last ip is: {}".format(last_ip))
+            while response == None:
+                try:
+                    response = requests.post("http://{}:5001/refreshConfiguration".format(last_ip), timeout=5)
+                except:
+                    pass
+            
+            response = requests.post("http://127.0.0.1:5000/redistribute")
+            res_json = response.json()
+            if res_json['success'] == 'True':
+                return "memcache pool size increment is successful!"
+            else:
+                return "memcache redistribution failed"
+            # return "memcache pool size increment is successful!"
 
         elif new_node_count < curr_node_count:
             for x in range (curr_node_count - new_node_count):
@@ -309,13 +320,13 @@ def resize_mem_cache():
                             WHERE MemcacheID = %s'''
                 cursor.execute(query, (memcache_id,))
                 cnx.commit()
-            # response = requests.post("http://127.0.0.1:5000/redistribute", timeout=5)
-            # res_json = response.json()
-            # if res_json['success'] == 'True':
-            #     return "memcache pool size increment is successful!"
-            # else:
-            #     return "memcache redistribution failed"
-            return "memcache pool size decrement is successful!"
+            response = requests.post("http://127.0.0.1:5000/redistribute")
+            res_json = response.json()
+            if res_json['success'] == 'True':
+                return "memcache pool size increment is successful!"
+            else:
+                return "memcache redistribution failed"
+            # return "memcache pool size decrement is successful!"
         
         else:
             return "memcache pool size did not change"
