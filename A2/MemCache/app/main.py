@@ -21,7 +21,7 @@ import cloudwatch
 import socket
 from botocore.exceptions import ClientError
 
-SECONDS_WRITING_2DB_INTERVAL = 60
+SECONDS_WRITING_2DB_INTERVAL = 5
 
 
 # SECONDS_WRITING_2DB_INTERVAL = 5  #for test

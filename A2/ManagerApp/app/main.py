@@ -7,10 +7,11 @@ from flask import jsonify
 import requests
 import mysql.connector
 from app.config import db_config, ami_id, subnet_id, s3_bucket
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import jyserver.Flask as jsf
 import boto3
 import time
+import pytz
 
 SECONDS_READING_2DB_INTERVAL = 60
 
@@ -50,6 +51,8 @@ def teardown_db(exception):
 
 
 # global
+aggregated_statistics = []
+tzutc_Toronto = timezone(timedelta(hours=-5))
 new_node_count = 0
 memcache_id_list = {}
 memcache_ip_list = {}
@@ -123,16 +126,16 @@ class read_statistics_2CloudWatch():
         self.avg_HitRate = -1
         self.MetricName = ['single_ItemNum', 'single_currentMemCache', 'single_TotalRequestNum',
                            'single_GetPicRequestNum', 'single_miss_num', 'singe_hit_num']
-        self.statistic = dict.fromkeys(self.MetricName, 0)
-        self.cloudwatch_data = {}
+        self.cloudwatch_data = aggregated_statistics
 
     def read_statistics(self):
         while True:
             print("statistic report2: ", threading.current_thread().name)
             print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            data_each_time = {}
+            statistic = dict.fromkeys(self.MetricName, 0)
             cloudwatch = boto3.client('cloudwatch')
             for metric in self.MetricName:
-                # print("In the loop", metric)
                 cloudwatch_response = cloudwatch.get_metric_statistics(
                     Namespace='statistical_variable_of_one_instance',
                     MetricName=metric,
@@ -149,29 +152,28 @@ class read_statistics_2CloudWatch():
                         'Sum',
                     ],
                 )
-                # print(cloudwatch_response)
                 if len(cloudwatch_response['Datapoints']) != 0:
-                    self.statistic[metric] = cloudwatch_response['Datapoints'][0]['Sum']
+                    statistic[metric] = cloudwatch_response['Datapoints'][0]['Sum']
                 else:
-                    self.statistic[metric] = None
+                    statistic[metric] = None
 
-            if self.statistic['single_GetPicRequestNum'] and self.statistic['single_miss_num'] and self.statistic['singe_hit_num']:
+            if statistic['single_GetPicRequestNum'] is None:
                 print("No DATA so far!!!!")
             else:
-                if self.statistic['single_GetPicRequestNum'] != 0:
-                    self.avg_MissRate = self.statistic['single_miss_num'] / self.statistic['single_GetPicRequestNum']
-                    self.avg_HitRate = self.statistic['singe_hit_num'] / self.statistic['single_GetPicRequestNum']
-
-            # print(self.statistic)
-            # print("\n average miss rate: \n" + str(self.avg_MissRate))
+                if statistic['single_GetPicRequestNum'] != 0:
+                    self.avg_MissRate = round(statistic['single_miss_num'] / statistic['single_GetPicRequestNum'], 3)
+                    self.avg_HitRate = round(statistic['singe_hit_num'] / statistic['single_GetPicRequestNum'], 3)
+            statistic["avg_MissRate"] = self.avg_MissRate
+            statistic["avg_HitRate"] = self.avg_HitRate
 
             if len(cloudwatch_response['Datapoints']) != 0:
-                time_each_data = cloudwatch_response['Datapoints'][0]['Timestamp']
+                time_each_data = cloudwatch_response['Datapoints'][0]['Timestamp'].astimezone(tzutc_Toronto)
             else:
                 time_each_data = "Null"
-
-            self.cloudwatch_data[time_each_data] = self.statistic
-            print(self.cloudwatch_data)
+            data_each_time["time"] = time_each_data
+            data_each_time["statistic"] = statistic
+            self.cloudwatch_data.append(data_each_time)
+            print(data_each_time)
             # cloudwatch_sum_miss_num = cloudwatch.get_metric_statistics(
             #     Namespace='statistical_variable_of_one_instance',
             #     MetricName='single_miss_num',
@@ -227,18 +229,18 @@ class read_statistics_2CloudWatch():
 
 
 statistic_cloudwatch = read_statistics_2CloudWatch()
-threading.Thread(target=statistic_cloudwatch.read_statistics(), daemon=True).start()
+threading.Thread(target=statistic_cloudwatch.read_statistics, daemon=True).start()
 
 
 @webapp_manager.route('/statistics', methods=['GET'])
 def statistics():
     cnx = get_db()
     cursor = cnx.cursor()
-    query = "SELECT * FROM statistics"
+    query = '''SELECT COUNT(*) FROM memcachelist '''
     cursor.execute(query)
-
-    start_time = datetime.utcnow().timestamp() - timedelta(minutes=30)
-    return render_template("statistics.html", title="Memory Cache Statistics", cursor=cursor, start_time=start_time)
+    node_num = cursor.fetchone()[0]
+    start_time = (datetime.utcnow() - timedelta(minutes=30)).replace(tzinfo=pytz.UTC).astimezone(tzutc_Toronto)
+    return render_template("statistics.html", title="Memory Cache Statistics", aggregated_statistics=aggregated_statistics, node_num=node_num, start_time=start_time)
 
 
 @webapp_manager.route('/config_form', methods=['GET'])
@@ -349,10 +351,10 @@ def resize_mem_cache():
         if 'ratio_shrink' not in request.form:
             return "Missing Ratio by which to shrink the pool"
 
-        max_missrate = request.form.get('max_missrate')
-        min_missrate = request.form.get('min_missrate')
-        ratio_expand = request.form.get('ratio_expand')
-        ratio_shrink = request.form.get('ratio_shrink')
+        max_missrate = float(request.form.get('max_missrate'))
+        min_missrate = float(request.form.get('min_missrate'))
+        ratio_expand = float(request.form.get('ratio_expand'))
+        ratio_shrink = float(request.form.get('ratio_shrink'))
 
         if max_missrate == '':
             return 'Max Miss Rate threshold is empty'
