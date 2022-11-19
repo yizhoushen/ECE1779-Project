@@ -85,6 +85,8 @@ def image_upload():
     for row in cursor:
         memcache_id = row[0]
         public_ip = row[1]
+        if public_ip == 'waiting':
+            continue
         memcache_ip_list[memcache_id] = public_ip
         node_count = node_count + 1
 
@@ -160,6 +162,8 @@ def image_display():
     for row in cursor:
         memcache_id = row[0]
         public_ip = row[1]
+        if public_ip == 'waiting':
+            continue
         memcache_ip_list[memcache_id] = public_ip
         node_count = node_count + 1
 
@@ -189,6 +193,13 @@ def image_display():
         # save key_value in memcache_track
         memcache_track[image_key] = encoded_string
         memcache_track.move_to_end(key=image_key, last=True)
+
+        response = requests.post("http://127.0.0.1:5003/new_get_requests", timeout=5)
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            pass
+        else:
+            return "Failed to send new_get_requests to auto scaler"
 
         return render_template("image_display.html", title="Image Display", encoded_string=encoded_string)
     else:
@@ -224,6 +235,14 @@ def image_display():
             read_end = time.time()
             duration = (read_end - read_start) * 1000
             print("time used for reading from local file: {}".format(duration))
+
+            response = requests.post("http://127.0.0.1:5003/new_get_requests", timeout=5)
+            res_json = response.json()
+            if res_json['success'] == 'True':
+                pass
+            else:
+                return "Failed to send new_get_requests to auto scaler"
+
             return render_template("image_display.html", title="Image Display", encoded_string=encoded_string, local_file=True)
         else:
             return "Failed to get repsonse from memcache/put_kv"
