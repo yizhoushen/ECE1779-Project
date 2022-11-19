@@ -11,7 +11,10 @@ from datetime import datetime, timedelta
 import jyserver.Flask as jsf
 import boto3
 import time
+
 SECONDS_READING_2DB_INTERVAL = 60
+
+
 # s3 = boto3.resource('s3',
 #                   aws_access_key_id=aws_access['aws_access_key_id'],
 #                   aws_secret_access_key=aws_access['aws_secret_access_key'])
@@ -22,11 +25,13 @@ def connect_to_database():
                                    host=db_config['host'],
                                    database=db_config['database'])
 
+
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
         db = g._database = connect_to_database()
     return db
+
 
 # def get_memcache_count():
 #     cnx = get_db()
@@ -43,6 +48,7 @@ def teardown_db(exception):
     if db is not None:
         db.close()
 
+
 # global
 new_node_count = 0
 memcache_id_list = {}
@@ -52,6 +58,7 @@ cd /home/ubuntu/ECE1779-Project
 source venv/bin/activate
 cd A2
 bash start.sh'''
+
 
 def create_ec2():
     ec2 = boto3.resource('ec2')
@@ -66,23 +73,28 @@ def create_ec2():
     instance = instances[0]
     return instance
 
+
 def delete_ec2(instance_id):
     ec2 = boto3.client('ec2')
-    ec2.terminate_instances(InstanceIds = [instance_id])
+    ec2.terminate_instances(InstanceIds=[instance_id])
 
-#Create/terminate or Start/Stop the instance?
+
+# Create/terminate or Start/Stop the instance?
 def start_ec2(instance_id):
     ec2 = boto3.client('ec2')
     ec2.start_instances(InstanceIds=[instance_id])
+
 
 def stop_ec2(instance_id):
     ec2 = boto3.client('ec2')
     ec2.stop_instances(InstanceIds=[instance_id])
 
+
 @webapp_manager.route('/', methods=['GET'])
 @webapp_manager.route('/main', methods=['GET'])
 def main():
     return render_template("main.html")
+
 
 @jsf.use(webapp_manager)
 class App:
@@ -103,80 +115,119 @@ class App:
         global new_node_count
         new_node_count = self.count
 
+
 class read_statistics_2CloudWatch():
     def __init__(self) -> None:
         # Statistical variables
-        self.currentMemCache = 0
-        self.ItemNum = 0
-        self.TotalRequestNum = 0
-        self.MissNum = 0
-        self.HitNum = 0
-        self.GetPicRequestNum = 0
         self.avg_MissRate = -1
         self.avg_HitRate = -1
+        self.MetricName = ['single_ItemNum', 'single_currentMemCache', 'single_TotalRequestNum',
+                           'single_GetPicRequestNum', 'single_miss_num', 'singe_hit_num']
+        self.statistic = dict.fromkeys(self.MetricName, 0)
+        self.cloudwatch_data = {}
 
-    def read_miss_rate_CloudWatch(self):
+    def read_statistics(self):
         while True:
-
             print("statistic report2: ", threading.current_thread().name)
             print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             cloudwatch = boto3.client('cloudwatch')
-            cloudwatch_sum_miss_num = cloudwatch.get_metric_statistics(
-                Namespace='statistical_variable_of_one_instance',
-                MetricName='single_miss_num',
-                Dimensions=[
-                    {
-                        'Name': 'instance-id',
-                        'Value': 'string'
-                    },
-                ],
-                StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
-                EndTime=datetime.utcnow(),
-                Period=60,
-                Statistics=[
-                    'Sum',
-                ],
-
-            )
-            print(cloudwatch_sum_miss_num)
-
-            cloudwatch_sum_GetPicRequestNum = cloudwatch.get_metric_statistics(
-                Namespace='statistical_variable_of_one_instance',
-                MetricName='single_GetPicRequestNum',
-                Dimensions=[
-                    {
-                        'Name': 'instance-id',
-                        'Value': 'string'
-                    },
-                ],
-                StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
-                EndTime=datetime.utcnow(),
-                Period=60,
-                Statistics=[
-                    'Sum',
-                ],
-
-            )
-            print(cloudwatch_sum_GetPicRequestNum)
-
-            if len(cloudwatch_sum_miss_num['Datapoints']) == 0 or len(
-                    cloudwatch_sum_GetPicRequestNum['Datapoints']) == 0:
-                self.MissNum = -2
-            else:
-                self.MissNum = cloudwatch_sum_miss_num['Datapoints'][0]['Sum']
-                self.GetPicRequestNum = cloudwatch_sum_GetPicRequestNum['Datapoints'][0]['Sum']
-                if self.GetPicRequestNum == 0:
-                    self.avg_MissRate = -1
+            for metric in self.MetricName:
+                # print("In the loop", metric)
+                cloudwatch_response = cloudwatch.get_metric_statistics(
+                    Namespace='statistical_variable_of_one_instance',
+                    MetricName=metric,
+                    Dimensions=[
+                        {
+                            'Name': 'instance-id',
+                            'Value': 'string'
+                        },
+                    ],
+                    StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
+                    EndTime=datetime.utcnow(),
+                    Period=60,
+                    Statistics=[
+                        'Sum',
+                    ],
+                )
+                # print(cloudwatch_response)
+                if len(cloudwatch_response['Datapoints']) != 0:
+                    self.statistic[metric] = cloudwatch_response['Datapoints'][0]['Sum']
                 else:
-                    self.avg_MissRate = self.MissNum / self.GetPicRequestNum
-                print("average miss rate: " + str(self.avg_MissRate))
-            print("Miss number: " + str(self.MissNum))
+                    self.statistic[metric] = None
+
+            if self.statistic['single_GetPicRequestNum'] and self.statistic['single_miss_num'] and self.statistic['singe_hit_num']:
+                print("No DATA so far!!!!")
+            else:
+                if self.statistic['single_GetPicRequestNum'] != 0:
+                    self.avg_MissRate = self.statistic['single_miss_num'] / self.statistic['single_GetPicRequestNum']
+                    self.avg_HitRate = self.statistic['singe_hit_num'] / self.statistic['single_GetPicRequestNum']
+
+            # print(self.statistic)
+            # print("\n average miss rate: \n" + str(self.avg_MissRate))
+
+            if len(cloudwatch_response['Datapoints']) != 0:
+                time_each_data = cloudwatch_response['Datapoints'][0]['Timestamp']
+            else:
+                time_each_data = "Null"
+
+            self.cloudwatch_data[time_each_data] = self.statistic
+            print(self.cloudwatch_data)
+            # cloudwatch_sum_miss_num = cloudwatch.get_metric_statistics(
+            #     Namespace='statistical_variable_of_one_instance',
+            #     MetricName='single_miss_num',
+            #     Dimensions=[
+            #         {
+            #             'Name': 'instance-id',
+            #             'Value': 'string'
+            #         },
+            #     ],
+            #     StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
+            #     EndTime=datetime.utcnow(),
+            #     Period=60,
+            #     Statistics=[
+            #         'Sum',
+            #     ],
+            #
+            # )
+            # print(cloudwatch_sum_miss_num)
+            #
+            # cloudwatch_sum_GetPicRequestNum = cloudwatch.get_metric_statistics(
+            #     Namespace='statistical_variable_of_one_instance',
+            #     MetricName='single_GetPicRequestNum',
+            #     Dimensions=[
+            #         {
+            #             'Name': 'instance-id',
+            #             'Value': 'string'
+            #         },
+            #     ],
+            #     StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
+            #     EndTime=datetime.utcnow(),
+            #     Period=60,
+            #     Statistics=[
+            #         'Sum',
+            #     ],
+            #
+            # )
+            # print(cloudwatch_sum_GetPicRequestNum)
+            #
+            # if len(cloudwatch_sum_miss_num['Datapoints']) == 0 or len(
+            #         cloudwatch_sum_GetPicRequestNum['Datapoints']) == 0:
+            #     self.MissNum = -2
+            # else:
+            #     self.MissNum = cloudwatch_sum_miss_num['Datapoints'][0]['Sum']
+            #     self.GetPicRequestNum = cloudwatch_sum_GetPicRequestNum['Datapoints'][0]['Sum']
+            #     if self.GetPicRequestNum == 0:
+            #         self.avg_MissRate = -1
+            #     else:
+            #         self.avg_MissRate = self.MissNum / self.GetPicRequestNum
+            #     print("average miss rate: " + str(self.avg_MissRate))
+            # print("Miss number: " + str(self.MissNum))
 
             time.sleep(SECONDS_READING_2DB_INTERVAL)
 
-statistic_cloudwatch = read_statistics_2CloudWatch()
-threading.Thread(target=statistic_cloudwatch.read_miss_rate_CloudWatch(), daemon=True).start()
 
+statistic_cloudwatch = read_statistics_2CloudWatch()
+threading.Thread(target=statistic_cloudwatch.read_statistics(), daemon=True).start()
 
 
 @webapp_manager.route('/statistics', methods=['GET'])
@@ -186,8 +237,9 @@ def statistics():
     query = "SELECT * FROM statistics"
     cursor.execute(query)
 
-    start_time = datetime.now() - timedelta(minutes=10)
+    start_time = datetime.utcnow().timestamp() - timedelta(minutes=30)
     return render_template("statistics.html", title="Memory Cache Statistics", cursor=cursor, start_time=start_time)
+
 
 @webapp_manager.route('/config_form', methods=['GET'])
 def config_form():
@@ -201,6 +253,7 @@ def config_form():
         memcache_ip_list[memcache_id] = instance_ip
     print("memcache_ip_list: {}".format(memcache_ip_list))
     return render_template("config_form.html", title="Configure Memory Cache")
+
 
 @webapp_manager.route('/config_mem_cache', methods=['POST'])
 def config_mem_cache():
@@ -232,14 +285,16 @@ def config_mem_cache():
         cnx.commit()
 
         for memcache_id in memcache_ip_list:
-            response = requests.post("http://{}:5001/refreshConfiguration".format(memcache_ip_list[memcache_id]), timeout=5)
+            response = requests.post("http://{}:5001/refreshConfiguration".format(memcache_ip_list[memcache_id]),
+                                     timeout=5)
             res_json = response.json()
             if res_json['success'] == 'True':
                 pass
             elif res_json['success'] == 'False':
                 return "Cache configuration from ip {} failed!".format(memcache_ip_list[memcache_id])
             else:
-                return "Failed to get repsonse from {} memcache/refreshConfiguration".format(memcache_ip_list[memcache_id])
+                return "Failed to get repsonse from {} memcache/refreshConfiguration".format(
+                    memcache_ip_list[memcache_id])
         return render_template("execute_result.html", title="Cache configuration is successful!")
 
     elif 'cache_clear' in request.form and 'cache_configure' not in request.form:
@@ -276,7 +331,10 @@ def resize_form():
         instance_id = row[1]
         memcache_id_list[memcache_id] = instance_id
 
-    return App.render(render_template("resize_form.html", title="Change Memory Cache Resize Mode", curr_node_count=curr_node_count, new_node_count=new_node_count))
+    return App.render(
+        render_template("resize_form.html", title="Change Memory Cache Resize Mode", curr_node_count=curr_node_count,
+                        new_node_count=new_node_count))
+
 
 @webapp_manager.route('/resize_mem_cache', methods=['POST'])
 def resize_mem_cache():
@@ -341,18 +399,18 @@ def resize_mem_cache():
 
         if new_node_count > curr_node_count:
             memcache_instance_list = {}
-            for x in range (new_node_count - curr_node_count):
+            for x in range(new_node_count - curr_node_count):
                 instance = create_ec2()
                 created_instance_id = instance.id
                 memcache_id = x + curr_node_count
                 memcache_instance_list[memcache_id] = instance
-                
+
                 cursor = cnx.cursor()
                 query = ''' INSERT INTO memcachelist(MemcacheID, InstanceID, PublicIP)
                             VALUES(%s, %s, %s)'''
                 cursor.execute(query, (memcache_id, created_instance_id, 'waiting'))
                 cnx.commit()
-            for x in range (new_node_count - curr_node_count):
+            for x in range(new_node_count - curr_node_count):
                 memcache_id = x + curr_node_count
                 instance = memcache_instance_list[memcache_id]
                 instance.wait_until_running()
@@ -376,7 +434,7 @@ def resize_mem_cache():
                     response = requests.post("http://{}:5001/refreshConfiguration".format(last_ip), timeout=5)
                 except:
                     pass
-            
+
             response = requests.post("http://127.0.0.1:5000/redistribute")
             res_json = response.json()
             if res_json['success'] == 'True':
@@ -386,7 +444,7 @@ def resize_mem_cache():
             # return "memcache pool size increment is successful!"
 
         elif new_node_count < curr_node_count:
-            for x in range (curr_node_count - new_node_count):
+            for x in range(curr_node_count - new_node_count):
                 memcache_id = curr_node_count - 1 - x
                 deleted_instance_id = memcache_id_list[memcache_id]
                 delete_ec2(deleted_instance_id)
@@ -404,7 +462,7 @@ def resize_mem_cache():
             else:
                 return "memcache redistribution failed"
             # return "memcache pool size decrement is successful!"
-        
+
         else:
             return "memcache pool size did not change"
 
@@ -438,8 +496,9 @@ def delet_all_data():
             return "Cache clear from ip {} failed!".format(curr_ip)
         else:
             return "Failed to get repsonse from {} memcache/clear".format(curr_ip)
-    
+
     return 'success'
+
 
 @webapp_manager.route('/delete_memcache_nodes', methods=['POST'])
 def delet_memcache_nodes():
