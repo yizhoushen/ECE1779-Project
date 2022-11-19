@@ -114,48 +114,7 @@ class read_statistics_2CloudWatch():
             print("statistic report2: ", threading.current_thread().name)
             print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             cloudwatch = boto3.client('cloudwatch')
-            # for metric in self.MetricName:
-            #     # print("In the loop", metric)
-            #     cloudwatch_response = cloudwatch.get_metric_statistics(
-            #         Namespace='statistical_variable_of_one_instance',
-            #         MetricName=metric,
-            #         Dimensions=[
-            #             {
-            #                 'Name': 'instance-id',
-            #                 'Value': 'string'
-            #             },
-            #         ],
-            #         StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
-            #         EndTime=datetime.utcnow(),
-            #         Period=60,
-            #         Statistics=[
-            #             'Sum',
-            #         ],
-            #     )
-            #     # print(cloudwatch_response)
-            #     if len(cloudwatch_response['Datapoints']) != 0:
-            #         self.statistic[metric] = cloudwatch_response['Datapoints'][0]['Sum']
-            #     else:
-            #         self.statistic[metric] = None
 
-            # if self.statistic['single_GetPicRequestNum'] and self.statistic['single_miss_num'] and self.statistic['singe_hit_num']:
-            #     print("No DATA so far!!!!")
-            # else:
-            #     if self.statistic['single_GetPicRequestNum'] != 0:
-            #         self.avg_MissRate = self.statistic['single_miss_num'] / self.statistic['single_GetPicRequestNum']
-            #         self.avg_HitRate = self.statistic['singe_hit_num'] / self.statistic['single_GetPicRequestNum']
-
-            # # print(self.statistic)
-            # # print("\n average miss rate: \n" + str(self.avg_MissRate))
-
-            # if len(cloudwatch_response['Datapoints']) != 0:
-            #     time_each_data = cloudwatch_response['Datapoints'][0]['Timestamp']
-            # else:
-            #     time_each_data = "Null"
-
-            # self.cloudwatch_data[time_each_data] = self.statistic
-            # print(self.cloudwatch_data)
-            
             
             cloudwatch_sum_miss_num = cloudwatch.get_metric_statistics(
                 Namespace='statistical_variable_of_one_instance',
@@ -166,11 +125,11 @@ class read_statistics_2CloudWatch():
                         'Value': 'string'
                     },
                 ],
-                StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
+                StartTime=datetime.utcnow() - timedelta(seconds=1 * 5),
                 EndTime=datetime.utcnow(),
-                Period=60,
+                Period=5,
                 Statistics=[
-                    'Sum',
+                    'Sum', 'SampleCount',
                 ],
             
             )
@@ -185,11 +144,11 @@ class read_statistics_2CloudWatch():
                         'Value': 'string'
                     },
                 ],
-                StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
+                StartTime=datetime.utcnow() - timedelta(seconds=1 * 5),
                 EndTime=datetime.utcnow(),
-                Period=60,
+                Period=5,
                 Statistics=[
-                    'Sum',
+                    'Sum', 'SampleCount',
                 ],
             
             )

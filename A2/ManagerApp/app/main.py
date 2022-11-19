@@ -132,6 +132,7 @@ class read_statistics_2CloudWatch():
         while True:
             print("statistic report2: ", threading.current_thread().name)
             print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            time.sleep(SECONDS_READING_2DB_INTERVAL)
             data_each_time = {}
             statistic = dict.fromkeys(self.MetricName, 0)
             cloudwatch = boto3.client('cloudwatch')
@@ -145,13 +146,14 @@ class read_statistics_2CloudWatch():
                             'Value': 'string'
                         },
                     ],
-                    StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
+                    StartTime=datetime.utcnow() - timedelta(seconds=1 * 5),
                     EndTime=datetime.utcnow(),
-                    Period=60,
+                    Period=5,
                     Statistics=[
-                        'Sum',
+                        'Sum', 'SampleCount',
                     ],
                 )
+                print(cloudwatch_response)
                 if len(cloudwatch_response['Datapoints']) != 0:
                     statistic[metric] = cloudwatch_response['Datapoints'][0]['Sum']
                 else:
@@ -225,7 +227,7 @@ class read_statistics_2CloudWatch():
             #     print("average miss rate: " + str(self.avg_MissRate))
             # print("Miss number: " + str(self.MissNum))
 
-            time.sleep(SECONDS_READING_2DB_INTERVAL)
+
 
 
 statistic_cloudwatch = read_statistics_2CloudWatch()
@@ -240,7 +242,8 @@ def statistics():
     cursor.execute(query)
     node_num = cursor.fetchone()[0]
     start_time = (datetime.utcnow() - timedelta(minutes=30)).replace(tzinfo=pytz.UTC).astimezone(tzutc_Toronto)
-    return render_template("statistics.html", title="Memory Cache Statistics", aggregated_statistics=aggregated_statistics, node_num=node_num, start_time=start_time)
+    return render_template("statistics.html", title="Memory Cache Statistics",
+                           aggregated_statistics=aggregated_statistics, node_num=node_num, start_time=start_time)
 
 
 @webapp_manager.route('/config_form', methods=['GET'])
@@ -436,7 +439,7 @@ def resize_mem_cache():
                     response = requests.post("http://{}:5001/refreshConfiguration".format(last_ip), timeout=5)
                 except:
                     pass
-            
+
             # update memcache info in each newly created instance
             for x in range(new_node_count - curr_node_count):
                 memcache_id = x + curr_node_count
@@ -474,7 +477,7 @@ def resize_mem_cache():
             response = requests.post("http://127.0.0.1:5000/redistribute")
             res_json = response.json()
             if res_json['success'] == 'True':
-                return "memcache pool size increment is successful!"
+                return "memcache pool size decrement is successful!"
             else:
                 return "memcache redistribution failed"
             # return "memcache pool size decrement is successful!"

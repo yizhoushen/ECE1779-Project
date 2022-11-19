@@ -22,6 +22,7 @@ import socket
 from botocore.exceptions import ClientError
 
 SECONDS_WRITING_2DB_INTERVAL = 5
+StorageResolution = 1
 
 
 # SECONDS_WRITING_2DB_INTERVAL = 5  #for test
@@ -69,7 +70,6 @@ class PicMemCache(object):
         #     self.intance_id = cursor.fetchone()[0]
         # else:
         #     pass
-        self.instance_id = 'string'
 
         # Statistical variables
         self.drop_approach = 1
@@ -81,7 +81,8 @@ class PicMemCache(object):
         self.GetPicRequestNum = 0
 
         self.MemcacheID = 0
-        self.InstanceID = 'Current Instance ID'
+        # self.InstanceID = 'Current Instance ID'
+        self.InstanceID = 'string'
         self.PublicIP = '127.0.0.1'
 
         self.MC = OrderedDict()
@@ -261,10 +262,11 @@ class PicMemCache(object):
                         'Dimensions': [
                             {
                                 'Name': 'instance-id',
-                                'Value': self.instance_id
+                                'Value': self.InstanceID
                             },
                         ],
                         'Value': self.ItemNum,
+                        'StorageResolution': StorageResolution,
                     },
 
                     {
@@ -272,10 +274,11 @@ class PicMemCache(object):
                         'Dimensions': [
                             {
                                 'Name': 'instance-id',
-                                'Value': self.instance_id
+                                'Value': self.InstanceID
                             },
                         ],
                         'Value': self.currentMemCache,
+                        'StorageResolution': StorageResolution,
                     },
 
                     {
@@ -283,10 +286,11 @@ class PicMemCache(object):
                         'Dimensions': [
                             {
                                 'Name': 'instance-id',
-                                'Value': self.instance_id
+                                'Value': self.InstanceID
                             },
                         ],
                         'Value': self.TotalRequestNum,
+                        'StorageResolution': StorageResolution,
                     },
 
                     {
@@ -294,10 +298,11 @@ class PicMemCache(object):
                         'Dimensions': [
                             {
                                 'Name': 'instance-id',
-                                'Value': self.instance_id
+                                'Value': self.InstanceID
                             },
                         ],
                         'Value': self.GetPicRequestNum,
+                        'StorageResolution': StorageResolution,
                     },
 
                     {
@@ -305,10 +310,11 @@ class PicMemCache(object):
                         'Dimensions': [
                             {
                                 'Name': 'instance-id',
-                                'Value': self.instance_id
+                                'Value': self.InstanceID
                             },
                         ],
                         'Value': miss_rate,
+                        'StorageResolution': StorageResolution,
                     },
 
                     {
@@ -316,10 +322,11 @@ class PicMemCache(object):
                         'Dimensions': [
                             {
                                 'Name': 'instance-id',
-                                'Value': self.instance_id
+                                'Value': self.InstanceID
                             },
                         ],
                         'Value': -1 if self.GetPicRequestNum == 0 else self.HitNum / self.GetPicRequestNum,
+                        'StorageResolution': StorageResolution,
                     },
 
                     {
@@ -327,10 +334,11 @@ class PicMemCache(object):
                         'Dimensions': [
                             {
                                 'Name': 'instance-id',
-                                'Value': self.instance_id
+                                'Value': self.InstanceID
                             },
                         ],
                         'Value': self.MissNum,
+                        'StorageResolution': StorageResolution,
                     },
 
                     {
@@ -338,10 +346,11 @@ class PicMemCache(object):
                         'Dimensions': [
                             {
                                 'Name': 'instance-id',
-                                'Value': self.instance_id
+                                'Value': self.InstanceID
                             },
                         ],
                         'Value': self.HitNum,
+                        'StorageResolution': StorageResolution,
                     }
                 ]
             )
