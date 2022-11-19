@@ -92,7 +92,7 @@ def image_upload():
     # get md5 hash
     image_key_md5 = hashlib.md5(new_key.encode()).hexdigest()
     print("upload md5 hashing: {}".format(image_key_md5))
-    if len(image_key_md5) == 31:
+    if len(image_key_md5) < 32:
         partition = 0
     else:
         partition = image_key_md5[0]
@@ -166,7 +166,7 @@ def image_display():
     # get md5 hash
     image_key_md5 = hashlib.md5(image_key.encode()).hexdigest()
     print("display md5 hashing: {}".format(image_key_md5))
-    if len(image_key_md5) == 31:
+    if len(image_key_md5) < 32:
         partition = 0
     else:
         partition = image_key_md5[0]
@@ -262,7 +262,7 @@ def redistribute():
         print("memcache_track key: {} ".format(key))
         print("memcache_track value: {}".format(value[:10]))
         image_key_md5 = hashlib.md5(key.encode()).hexdigest()
-        if len(image_key_md5) == 31:
+        if len(image_key_md5) < 32:
             partition = 0
         else:
             partition = image_key_md5[0]
