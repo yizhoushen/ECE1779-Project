@@ -66,7 +66,7 @@ bash start.sh'''
 def create_ec2():
     ec2 = boto3.resource('ec2')
     instances = ec2.create_instances(
-        ImageId='ami-0b3a8a363dc47e0eb',
+        ImageId=ami_id,
         MinCount=1,
         MaxCount=1,
         InstanceType="t2.micro",
