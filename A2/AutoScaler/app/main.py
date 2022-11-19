@@ -3,9 +3,10 @@ from app import webapp_autoscaler
 from flask import json
 from flask import jsonify
 
-from app.config import db_config
+from app.config import db_config, ami_id
 import mysql.connector
 import boto3
+import requests
 
 import math
 import time
@@ -14,7 +15,7 @@ import threading
 
 # Autoscaler Status Variables
 AUTO_SCALER_ENABLE = False
-AUTO_SCALER_CHECK_SIGN_INTERVAL = 5
+AUTO_SCALER_CHECK_SIGN_INTERVAL = 100
 SECONDS_READING_2DB_INTERVAL = 15
 
 max_miss_rate_threshold = 0.8
@@ -40,49 +41,165 @@ def get_db():
     db = connect_to_database()
     return db
 
+user_data = '''#!/bin/bash
+cd /home/ubuntu/ECE1779-Project
+source venv/bin/activate
+cd A2
+bash start.sh'''
+
+def create_ec2():
+    ec2 = boto3.resource('ec2')
+    instances = ec2.create_instances(
+        ImageId=ami_id,
+        MinCount=1,
+        MaxCount=1,
+        InstanceType="t2.micro",
+        KeyName="ece1779-2nd-acc",
+        UserData=user_data
+    )
+    instance = instances[0]
+    return instance
+
+
+def delete_ec2(instance_id):
+    ec2 = boto3.client('ec2')
+    ec2.terminate_instances(InstanceIds=[instance_id])
 
 def get_instance_change(miss_rate):
     # delta_of_instance: positive = num to be added； negative = num to be reduced ; 0 means no change
     global max_miss_rate_threshold, min_miss_rate_threshold
     global expand_ratio, shrink_ratio
 
-    # get most updated num_of_instances, old_num_of_instance
+    if miss_rate == -1:
+        return 0
+    elif min_miss_rate_threshold < miss_rate and miss_rate < max_miss_rate_threshold:
+        return 0
+    else:
+        # get most updated num_of_instances, old_num_of_instance
+        cnx = get_db()
+        cursor = cnx.cursor()
+        sql_num_of_activate_instances = "SELECT COUNT(MemcacheID) FROM memcachelist"
+        cursor.execute(sql_num_of_activate_instances)
+        num_of_instances = cursor.fetchone()[0]
+        print("num of instances: {}".format(num_of_instances))
+        old_num_of_instances = num_of_instances
+
+        # expand
+        if miss_rate > max_miss_rate_threshold:
+            # expand instances based on expand_ratio
+            num_of_instances *= expand_ratio
+            num_of_instances = math.ceil(num_of_instances)
+            if num_of_instances > 8:
+                num_of_instances = 8
+
+        # shrink
+        if miss_rate < min_miss_rate_threshold:
+            # shrink instances based on shrink_ratio
+            num_of_instances *= shrink_ratio
+            num_of_instances = math.ceil(num_of_instances)
+            if num_of_instances < 1:
+                num_of_instances = 1
+
+        delta_of_instances = int(num_of_instances - old_num_of_instances)
+        return delta_of_instances
+
+
+def operate_instances(delta_of_instances):
+    # to be done
+
     cnx = get_db()
     cursor = cnx.cursor()
     sql_num_of_activate_instances = "SELECT COUNT(MemcacheID) FROM memcachelist"
     cursor.execute(sql_num_of_activate_instances)
-    num_of_instances = cursor.fetchone()[0]
-    print("num of instances: {}".format(num_of_instances))
-    old_num_of_instances = num_of_instances
-    print("old num of instances: {}".format(old_num_of_instances))
+    old_num_of_instances = cursor.fetchone()[0]
 
-    # expand
-    if miss_rate > max_miss_rate_threshold:
-        # expand instances based on expand_ratio
-        num_of_instances *= expand_ratio
-        num_of_instances = math.ceil(num_of_instances)
-        if num_of_instances > 8:
-            num_of_instances = 8
-
-    # shrink
-    if miss_rate < min_miss_rate_threshold:
-        # shrink instances based on shrink_ratio
-        num_of_instances *= shrink_ratio
-        num_of_instances = math.ceil(num_of_instances)
-        if num_of_instances < 1:
-            num_of_instances = 1
-
-    delta_of_instances = int(num_of_instances - old_num_of_instances)
-    return delta_of_instances
-
-
-def operate_instances(delta_of_instances=0):
-    # to be done
     if delta_of_instances > 0:
-        # maybe one way: while until delta_of_instances == 0
         print("Need to expand " + str(delta_of_instances) + " new instances automatically!")
+        memcache_instance_list = {}
+        for x in range(delta_of_instances):
+            instance = create_ec2()
+            created_instance_id = instance.id
+            memcache_id = x + old_num_of_instances
+            memcache_instance_list[memcache_id] = instance
+
+            cursor = cnx.cursor()
+            query = ''' INSERT INTO memcachelist(MemcacheID, InstanceID, PublicIP)
+                        VALUES(%s, %s, %s)'''
+            cursor.execute(query, (memcache_id, created_instance_id, 'waiting'))
+            cnx.commit()
+        for x in range(delta_of_instances):
+            memcache_id = x + old_num_of_instances
+            instance = memcache_instance_list[memcache_id]
+            instance.wait_until_running()
+            instance.reload()
+            created_instance_ip = instance.public_ip_address
+
+            cursor = cnx.cursor()
+            query = ''' UPDATE memcachelist
+                        SET PublicIP = %s
+                        WHERE MemcacheID = %s'''
+            cursor.execute(query, (created_instance_ip, memcache_id))
+            cnx.commit()
+
+        # check if the initialization has finished
+        response = None
+        last_instance_id = old_num_of_instances + delta_of_instances - 1
+        last_ip = memcache_instance_list[last_instance_id].public_ip_address
+        print("last ip is: {}".format(last_ip))
+        while response == None:
+            try:
+                response = requests.post("http://{}:5001/refreshConfiguration".format(last_ip), timeout=5)
+            except:
+                pass
+
+        # update memcache info in each newly created instance
+        for x in range(delta_of_instances):
+            memcache_id = x + old_num_of_instances
+            instance = memcache_instance_list[memcache_id]
+            instance_id = instance.id
+            public_ip = instance.public_ip_address
+            data = {'memcache_id': memcache_id, 'instance_id': instance_id, 'public_ip': public_ip}
+            response = requests.post("http://{}:5001/updateMemcacheInfo".format(public_ip), data=data, timeout=5)
+            res_json = response.json()
+            if res_json['success'] == 'True':
+                pass
+            else:
+                return "memcache updateinfo failed"
+
+        response = requests.post("http://127.0.0.1:5000/redistribute")
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            pass
+        else:
+            return "memcache redistribution failed"
+        
     elif delta_of_instances < 0:
         print("Need to shrink " + str(abs(delta_of_instances)) + "instances automatically!")
+        memcache_id_list = {}
+        query = "SELECT MemcacheID, InstanceID FROM memcachelist"
+        cursor.execute(query)
+        for row in cursor:
+            memcache_id = row[0]
+            instance_id = row[1]
+            memcache_id_list[memcache_id] = instance_id
+        for x in range(abs(delta_of_instances)):
+            memcache_id = old_num_of_instances - 1 - x
+            deleted_instance_id = memcache_id_list[memcache_id]
+            delete_ec2(deleted_instance_id)
+            memcache_id_list.pop(memcache_id)
+
+            cursor = cnx.cursor()
+            query = ''' DELETE FROM memcachelist
+                        WHERE MemcacheID = %s'''
+            cursor.execute(query, (memcache_id,))
+            cnx.commit()
+        response = requests.post("http://127.0.0.1:5000/redistribute")
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            pass
+        else:
+            return "memcache redistribution failed"
+        
     else:
         print("Don't need to adjust instances!")
 
@@ -94,8 +211,9 @@ def autoscaler_mode_change():
             # step 1： get miss rate from CloudWatch API
             miss_rate = statistic_cloudwatch.avg_MissRate
             # step 2： adjust instances
-            delta_of_instances = get_instance_change(miss_rate=miss_rate)
-            operate_instances(delta_of_instances)
+            delta_of_instances = get_instance_change(miss_rate)
+            if delta_of_instances != 0:
+                operate_instances(delta_of_instances)
             time.sleep(AUTO_SCALER_CHECK_SIGN_INTERVAL)
 
 
@@ -221,55 +339,6 @@ def main():
     get_curr_autoscaler_status()
     return "The auto scaler is running. " \
            " Auto mode: " + str(AUTO_SCALER_ENABLE)
-
-
-# @webapp_autoscaler.route('/set_autoscaler_mode', methods=['POST'])
-# # has been tested successfully at Nov. 11
-# def set_autoscaler_mode():
-#     new_autoscaler_mode = float(request.form.get('autoscaler_mode'))
-#     if new_autoscaler_mode == 1.0:
-#         AUTO_SCALER_ENABLE = True
-#         # autoscaler_mode_change()
-#         response = jsonify(success='True',
-#                            message='Success! The mode of autoscaler is on.')
-#     elif new_autoscaler_mode == 0.0:
-#         AUTO_SCALER_ENABLE = False
-#         # autoscaler_mode_change()
-#         response = jsonify(success='True',
-#                            message='Success! The mode of autoscaler is off.')
-#     else:
-#         response = jsonify(success='False',
-#                            message='Failure! Illegal parameters, the mode of autoscaler unchanged.')
-#     return response
-#
-#
-# @webapp_autoscaler.route('/set_ratio', methods=['POST'])
-# # has been tested successfully at Nov. 11
-# def set_ratio():
-#     ratio_type = request.form.get('ratio_type')
-#     ratio_num = float(request.form.get('ratio_num'))
-#
-#     if ratio_type not in ["expand", "shrink"]:
-#         response = jsonify(success='False',
-#                            message='Failure! The ratio_type is illegal.')
-#     elif ratio_type == "expand":
-#         if ratio_num <= 1.0:
-#             response = jsonify(success='False',
-#                                message='Failure! The ratio_num is illegal.')
-#         else:
-#             expand_ratio = ratio_num
-#             response = jsonify(success='True',
-#                                message='Success! The expand_ratio has changed to ' + str(expand_ratio))
-#     elif ratio_type == "shrink":
-#         if ratio_num <= 0.0 or ratio_num >= 1.0:
-#             response = jsonify(success='False',
-#                                message='Failure! The ratio_num is illegal.')
-#         else:
-#             shrink_ratio = ratio_num
-#             response = jsonify(success='True',
-#                                message='Success! The shrink_ratio has changed to ' + str(shrink_ratio))
-#     return response
-
 
 @webapp_autoscaler.route('/set_autoscaler_to_automatic_mode', methods=['POST'])
 # has been tested successfully at Nov. 12

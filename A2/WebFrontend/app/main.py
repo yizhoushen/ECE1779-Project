@@ -85,6 +85,8 @@ def image_upload():
     for row in cursor:
         memcache_id = row[0]
         public_ip = row[1]
+        if public_ip == 'waiting':
+            continue
         memcache_ip_list[memcache_id] = public_ip
         node_count = node_count + 1
 
@@ -160,6 +162,8 @@ def image_display():
     for row in cursor:
         memcache_id = row[0]
         public_ip = row[1]
+        if public_ip == 'waiting':
+            continue
         memcache_ip_list[memcache_id] = public_ip
         node_count = node_count + 1
 
