@@ -15,7 +15,8 @@ import threading
 
 # Autoscaler Status Variables
 AUTO_SCALER_ENABLE = False
-AUTO_SCALER_CHECK_SIGN_INTERVAL = 100
+NEW_GET_REQUESTS = False
+AUTO_SCALER_CHECK_SIGN_INTERVAL = 80
 SECONDS_READING_2DB_INTERVAL = 15
 
 max_miss_rate_threshold = 0.8
@@ -106,7 +107,7 @@ def get_instance_change(miss_rate):
 
 def operate_instances(delta_of_instances):
     # to be done
-
+    global NEW_GET_REQUESTS
     cnx = get_db()
     cursor = cnx.cursor()
     sql_num_of_activate_instances = "SELECT COUNT(MemcacheID) FROM memcachelist"
@@ -172,7 +173,8 @@ def operate_instances(delta_of_instances):
             pass
         else:
             return "memcache redistribution failed"
-        
+        NEW_GET_REQUESTS = False
+
     elif delta_of_instances < 0:
         print("Need to shrink " + str(abs(delta_of_instances)) + "instances automatically!")
         memcache_id_list = {}
@@ -199,14 +201,15 @@ def operate_instances(delta_of_instances):
             pass
         else:
             return "memcache redistribution failed"
-        
+        NEW_GET_REQUESTS = False
+
     else:
         print("Don't need to adjust instances!")
 
 
 def autoscaler_mode_change():
     while True:
-        if AUTO_SCALER_ENABLE:
+        if AUTO_SCALER_ENABLE and NEW_GET_REQUESTS:
             print("The auto scaler is running in auto model.")
             # step 1： get miss rate from CloudWatch API
             miss_rate = statistic_cloudwatch.avg_MissRate
@@ -344,6 +347,7 @@ def main():
 # has been tested successfully at Nov. 12
 def set_autoscaler_to_automatic_mode():
     global AUTO_SCALER_ENABLE
+    global NEW_GET_REQUESTS
     global max_miss_rate_threshold, min_miss_rate_threshold
     global expand_ratio, shrink_ratio
 
@@ -357,6 +361,7 @@ def set_autoscaler_to_automatic_mode():
         if 0 < new_max_miss_rate_threshold <= 1 and 0 <= new_min_miss_rate_threshold < 1 and new_min_miss_rate_threshold < new_max_miss_rate_threshold:
             if new_expand_ratio > 1 and 0 < new_shrink_ratio < 1:
                 AUTO_SCALER_ENABLE = True
+                NEW_GET_REQUESTS = True
                 max_miss_rate_threshold = new_max_miss_rate_threshold
                 min_miss_rate_threshold = new_min_miss_rate_threshold
                 expand_ratio = new_expand_ratio
@@ -364,7 +369,8 @@ def set_autoscaler_to_automatic_mode():
 
                 response = jsonify(success='True',
                                    message='The parameters of autoscaler have changed success.')
-                print(AUTO_SCALER_ENABLE)
+                print("AUTO_SCALER_ENABLE: {}".format(AUTO_SCALER_ENABLE))
+                print("NEW_GET_REQUESTS: {}".format(NEW_GET_REQUESTS))
                 return response
 
     response = jsonify(success='False',
@@ -406,3 +412,9 @@ def get_curr_autoscaler_status():
     return response
 
 
+@webapp_autoscaler.route('/new_get_requests', methods=['POST'])
+def new_get_requests():
+    global NEW_GET_REQUESTS
+    NEW_GET_REQUESTS = True
+    response = jsonify(success='True')
+    return response

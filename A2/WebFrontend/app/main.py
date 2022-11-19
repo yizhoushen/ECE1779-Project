@@ -194,6 +194,13 @@ def image_display():
         memcache_track[image_key] = encoded_string
         memcache_track.move_to_end(key=image_key, last=True)
 
+        response = requests.post("http://127.0.0.1:5003/new_get_requests", timeout=5)
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            pass
+        else:
+            return "Failed to send new_get_requests to auto scaler"
+
         return render_template("image_display.html", title="Image Display", encoded_string=encoded_string)
     else:
         print("No Such image in memcache, getting from local file system...")
@@ -228,6 +235,14 @@ def image_display():
             read_end = time.time()
             duration = (read_end - read_start) * 1000
             print("time used for reading from local file: {}".format(duration))
+
+            response = requests.post("http://127.0.0.1:5003/new_get_requests", timeout=5)
+            res_json = response.json()
+            if res_json['success'] == 'True':
+                pass
+            else:
+                return "Failed to send new_get_requests to auto scaler"
+
             return render_template("image_display.html", title="Image Display", encoded_string=encoded_string, local_file=True)
         else:
             return "Failed to get repsonse from memcache/put_kv"
