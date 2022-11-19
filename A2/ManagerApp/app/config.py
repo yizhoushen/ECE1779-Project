@@ -6,8 +6,8 @@
 #              'database': 'ece1779project'}
 
 # config of local database
-db_config = {'user': 'dbadmin',
-             'password': 'admin1234',
+db_config = {'user': 'root',
+             'password': '301415',
              'host': '127.0.0.1',
              'database': 'ece1779project'}
 

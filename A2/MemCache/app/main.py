@@ -232,88 +232,8 @@ class PicMemCache(object):
 
             time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
-    # def cloudwatch(self):
-    #     while True:
-    #         print("statistic report: ", threading.current_thread().name)
-    #         print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    #         if self.GetPicRequestNum == 0:
-    #             miss_rate = -1
-    #         else:
-    #             miss_rate = self.MissNum / self.GetPicRequestNum
-    #         print(miss_rate)
-    #         cloudwatch = boto3.client('cloudwatch')
-    #         cloudwatch.put_metric_data(
-    #             MetricData=[{
-    #                 'MetricName': 'miss_rate',
-    #                 'Dimensions': [{
-    #                     'Name': 'instance',
-    #                     'Value': instance_name
-    #                 }],
-    #                 'Unit': 'None',
-    #                 'Value': miss_rate
-    #             }],
-    #             Namespace='EC2'
-    #         )
-    #         time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
-    def read_statistics_2CoudWatch(self):
-        while True:
-            print("statistic report2: ", threading.current_thread().name)
-            cloudwatch = boto3.client('cloudwatch')
-            cloudwatch_sum_miss_num = cloudwatch.get_metric_statistics(
-                Namespace='statistical_variable_of_one_instance',
-                MetricName='single_miss_num',
-                Dimensions=[
-                    {
-                        'Name': 'instance-id',
-                        'Value': self.instance_id
-                    },
-                ],
-                StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
-                EndTime=datetime.utcnow(),
-                Period=60,
-                Statistics=[
-                    'Sum',
-                ],
-
-            )
-            # print(cloudwatch_sum_miss_num)
-
-            cloudwatch_sum_GetPicRequestNum = cloudwatch.get_metric_statistics(
-                Namespace='statistical_variable_of_one_instance',
-                MetricName='single_GetPicRequestNum',
-                Dimensions=[
-                    {
-                        'Name': 'instance-id',
-                        'Value': self.instance_id
-                    },
-                ],
-                StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
-                EndTime=datetime.utcnow(),
-                Period=60,
-                Statistics=[
-                    'Sum',
-                ],
-
-            )
-            # print(cloudwatch_sum_GetPicRequestNum)
-
-            if len(cloudwatch_sum_miss_num['Datapoints']) == 0 or len(
-                    cloudwatch_sum_GetPicRequestNum['Datapoints']) == 0:
-                sum_miss_num = -2
-            else:
-                sum_miss_num = cloudwatch_sum_miss_num['Datapoints'][0]['Sum']
-                sum_GetPicRequestNum = cloudwatch_sum_GetPicRequestNum['Datapoints']['Sum']
-                if sum_GetPicRequestNum == 0:
-                    avg_miss_rate = -1
-                else:
-                    avg_miss_rate = sum_miss_num / sum_GetPicRequestNum
-                print("average miss rate: " + str(avg_miss_rate))
-            print("Miss number: " + str(sum_miss_num))
-
-            time.sleep(SECONDS_WRITING_2DB_INTERVAL)
-
-    def send_statistics_2CoudWatch(self):
+    def send_statistics_2CloudWatch(self):
         while True:
             print("statistic report1: ", threading.current_thread().name)
             print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -322,7 +242,7 @@ class PicMemCache(object):
             else:
                 miss_rate = self.MissNum / self.GetPicRequestNum
 
-            print(self.MissNum)
+            print("miss number:", self.MissNum)
             cloudwatch = boto3.client('cloudwatch')
             cloudwatch.put_metric_data(
                 Namespace='statistical_variable_of_one_instance',
@@ -421,8 +341,8 @@ class PicMemCache(object):
 
 memory1 = PicMemCache()
 # threading.Thread(target=memory1.write_statistics_2db, daemon=True).start()
-threading.Thread(target=memory1.send_statistics_2CoudWatch, daemon=True).start()
-threading.Thread(target=memory1.read_statistics_2CoudWatch, daemon=True).start()
+threading.Thread(target=memory1.send_statistics_2CloudWatch, daemon=True).start()
+# threading.Thread(target=memory1.read_statistics_2CoudWatch, daemon=True).start()
 
 
 # for i in range(60):

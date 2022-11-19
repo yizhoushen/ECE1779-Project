@@ -1,3 +1,5 @@
+import threading
+
 from flask import render_template, url_for, request, g
 from app import webapp_manager
 from flask import json
@@ -9,7 +11,7 @@ from datetime import datetime, timedelta
 import jyserver.Flask as jsf
 import boto3
 import time
-
+SECONDS_READING_2DB_INTERVAL = 60
 # s3 = boto3.resource('s3',
 #                   aws_access_key_id=aws_access['aws_access_key_id'],
 #                   aws_secret_access_key=aws_access['aws_secret_access_key'])
@@ -101,6 +103,81 @@ class App:
         global new_node_count
         new_node_count = self.count
 
+class read_statistics_2CloudWatch():
+    def __init__(self) -> None:
+        # Statistical variables
+        self.currentMemCache = 0
+        self.ItemNum = 0
+        self.TotalRequestNum = 0
+        self.MissNum = 0
+        self.HitNum = 0
+        self.GetPicRequestNum = 0
+        self.avg_MissRate = -1
+        self.avg_HitRate = -1
+
+    def read_miss_rate_CloudWatch(self):
+        while True:
+
+            print("statistic report2: ", threading.current_thread().name)
+            print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            cloudwatch = boto3.client('cloudwatch')
+            cloudwatch_sum_miss_num = cloudwatch.get_metric_statistics(
+                Namespace='statistical_variable_of_one_instance',
+                MetricName='single_miss_num',
+                Dimensions=[
+                    {
+                        'Name': 'instance-id',
+                        'Value': 'string'
+                    },
+                ],
+                StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
+                EndTime=datetime.utcnow(),
+                Period=60,
+                Statistics=[
+                    'Sum',
+                ],
+
+            )
+            print(cloudwatch_sum_miss_num)
+
+            cloudwatch_sum_GetPicRequestNum = cloudwatch.get_metric_statistics(
+                Namespace='statistical_variable_of_one_instance',
+                MetricName='single_GetPicRequestNum',
+                Dimensions=[
+                    {
+                        'Name': 'instance-id',
+                        'Value': 'string'
+                    },
+                ],
+                StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
+                EndTime=datetime.utcnow(),
+                Period=60,
+                Statistics=[
+                    'Sum',
+                ],
+
+            )
+            print(cloudwatch_sum_GetPicRequestNum)
+
+            if len(cloudwatch_sum_miss_num['Datapoints']) == 0 or len(
+                    cloudwatch_sum_GetPicRequestNum['Datapoints']) == 0:
+                self.MissNum = -2
+            else:
+                self.MissNum = cloudwatch_sum_miss_num['Datapoints'][0]['Sum']
+                self.GetPicRequestNum = cloudwatch_sum_GetPicRequestNum['Datapoints'][0]['Sum']
+                if self.GetPicRequestNum == 0:
+                    self.avg_MissRate = -1
+                else:
+                    self.avg_MissRate = self.MissNum / self.GetPicRequestNum
+                print("average miss rate: " + str(self.avg_MissRate))
+            print("Miss number: " + str(self.MissNum))
+
+            time.sleep(SECONDS_READING_2DB_INTERVAL)
+
+statistic_cloudwatch = read_statistics_2CloudWatch()
+threading.Thread(target=statistic_cloudwatch.read_miss_rate_CloudWatch(), daemon=True).start()
+
+
 
 @webapp_manager.route('/statistics', methods=['GET'])
 def statistics():
@@ -163,7 +240,7 @@ def config_mem_cache():
                 return "Cache configuration from ip {} failed!".format(memcache_ip_list[memcache_id])
             else:
                 return "Failed to get repsonse from {} memcache/refreshConfiguration".format(memcache_ip_list[memcache_id])
-        return "Cache configuration is successful! "
+        return render_template("execute_result.html", title="Cache configuration is successful!")
 
     elif 'cache_clear' in request.form and 'cache_configure' not in request.form:
         for memcache_id in memcache_ip_list:
@@ -175,7 +252,7 @@ def config_mem_cache():
                 return "Cache clear from ip {} failed!".format(memcache_ip_list[memcache_id])
             else:
                 return "Failed to get repsonse from {} memcache/clear".format(memcache_ip_list[memcache_id])
-        return "Cache clear is successful! "
+        return render_template("execute_result.html", title="Cache clear is successful!")
 
     else:
         return "Invalid! Please choose cache configure or cache clear"

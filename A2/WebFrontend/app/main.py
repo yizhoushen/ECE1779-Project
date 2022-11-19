@@ -25,7 +25,7 @@ import hashlib
 #                   aws_access_key_id=aws_access['aws_access_key_id'],
 #                   aws_secret_access_key=aws_access['aws_secret_access_key'])
 
-
+node_ip = "127.0.0.1"
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
                                    password=db_config['password'],
@@ -103,6 +103,7 @@ def image_upload():
 
     # invilidate memcache
     data = {'key': new_key}
+    node_ip = "127.0.0.1"
     response = requests.post("http://{}:5001/invalidateKey".format(node_ip), data=data, timeout=5)
     res_json = response.json()
     if res_json['success'] == 'True':
@@ -133,7 +134,8 @@ def image_upload():
     duration = (write_end - write_start) * 1000
     print("time used for writing: {}".format(duration))
 
-    return "Success"
+    # return "Success"
+    return render_template("execute_result.html", title="Upload image successfully")
 
 
 @webapp.route('/display_form', methods=['GET'])
@@ -171,10 +173,10 @@ def image_display():
     else:
         partition = image_key_md5[0]
     node_ip = memcache_ip_list[int(partition, base=16) % node_count]
-    print("display node_ip: {}".format(node_ip))        
-
+    print("display node_ip: {}".format(node_ip))
     # first try getting from memcache
     data = {'key': image_key}
+    node_ip = "127.0.0.1"
     response = requests.post("http://{}:5001/get".format(node_ip), data=data, timeout=5)
     print("response type from memcache/get: {}".format(type(response.json())))
     res_json = response.json()
