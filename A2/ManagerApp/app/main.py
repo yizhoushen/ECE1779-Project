@@ -436,6 +436,20 @@ def resize_mem_cache():
                     response = requests.post("http://{}:5001/refreshConfiguration".format(last_ip), timeout=5)
                 except:
                     pass
+            
+            # update memcache info in each newly created instance
+            for x in range(new_node_count - curr_node_count):
+                memcache_id = x + curr_node_count
+                instance = memcache_instance_list[memcache_id]
+                instance_id = instance.id
+                public_ip = instance.public_ip_address
+                data = {'memcache_id': memcache_id, 'instance_id': instance_id, 'public_ip': public_ip}
+                response = requests.post("http://{}:5001/updateMemcacheInfo".format(public_ip), data=data, timeout=5)
+                res_json = response.json()
+                if res_json['success'] == 'True':
+                    pass
+                else:
+                    return "memcache updateinfo failed"
 
             response = requests.post("http://127.0.0.1:5000/redistribute")
             res_json = response.json()

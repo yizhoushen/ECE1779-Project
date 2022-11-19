@@ -80,6 +80,10 @@ class PicMemCache(object):
         self.HitNum = 0
         self.GetPicRequestNum = 0
 
+        self.MemcacheID = 0
+        self.InstanceID = 'Current Instance ID'
+        self.PublicIP = '127.0.0.1'
+
         self.MC = OrderedDict()
         print("memCacheCapacity", self.memCacheCapacity)
 
@@ -199,6 +203,11 @@ class PicMemCache(object):
         print("currentMem: ", self.currentMemCache)
         # print("memCacheCapacity: ", self.memCacheCapacity)
         # print(self.MC)
+
+    def update_memcache_info(self, InstanceID, PublicIP, MemcacheID):
+        self.MemcacheID = MemcacheID
+        self.InstanceID = InstanceID
+        self.PublicIP = PublicIP
 
     def write_statistics_2db(self):
         while True:
@@ -425,6 +434,14 @@ def refreshConfiguration():
                            message=res)
     return response
 
+@webapp_memcache.route('/updateMemcacheInfo', methods=['POST'])
+def updateMemcacheInfo():
+    MemcacheID = request.form.get('memcache_id')
+    InstanceID = request.form.get('instance_id')
+    PublicIP = request.form.get('public_ip')
+    memory1.update_memcache_info(InstanceID, PublicIP, MemcacheID)
+    response = jsonify(success='True')
+    return response
 
 # @webapp_memcache.route('/upload', methods=['POST'])
 # def Front_end_upload():
