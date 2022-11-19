@@ -25,7 +25,6 @@ import hashlib
 #                   aws_access_key_id=aws_access['aws_access_key_id'],
 #                   aws_secret_access_key=aws_access['aws_secret_access_key'])
 
-node_ip = "127.0.0.1"
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
                                    password=db_config['password'],
@@ -103,7 +102,6 @@ def image_upload():
 
     # invilidate memcache
     data = {'key': new_key}
-    node_ip = "127.0.0.1"
     response = requests.post("http://{}:5001/invalidateKey".format(node_ip), data=data, timeout=5)
     res_json = response.json()
     if res_json['success'] == 'True':
@@ -176,7 +174,6 @@ def image_display():
     print("display node_ip: {}".format(node_ip))
     # first try getting from memcache
     data = {'key': image_key}
-    node_ip = "127.0.0.1"
     response = requests.post("http://{}:5001/get".format(node_ip), data=data, timeout=5)
     print("response type from memcache/get: {}".format(type(response.json())))
     res_json = response.json()
