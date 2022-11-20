@@ -444,7 +444,7 @@ def resize_mem_cache():
             for x in range(new_node_count - curr_node_count):
                 memcache_id = x + curr_node_count
                 instance = memcache_instance_list[memcache_id]
-                instance_id = instance.id
+                instance_id = str(instance.id)
                 public_ip = instance.public_ip_address
                 data = {'memcache_id': memcache_id, 'instance_id': instance_id, 'public_ip': public_ip}
                 response = requests.post("http://{}:5001/updateMemcacheInfo".format(public_ip), data=data, timeout=5)
@@ -460,7 +460,7 @@ def resize_mem_cache():
                 return "memcache pool size increment is successful!"
             else:
                 return "memcache redistribution failed"
-            # return "memcache pool size increment is successful!"
+            return "memcache pool size increment is successful!"
 
         elif new_node_count < curr_node_count:
             for x in range(curr_node_count - new_node_count):
