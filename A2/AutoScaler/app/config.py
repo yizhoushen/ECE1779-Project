@@ -17,4 +17,8 @@ db_config = {'user': 'dbadmin',
 #              'host': '127.0.0.1',
 #              'database': 'ece1779project'}
 
-ami_id = 'ami-098f13b542258e939'
+
+
+aws_access_key = "AKIAYCMAR64CBTBYTIQC"
+aws_secret_key = "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"
+ami_id = 'ami-0988d5433d4196604'

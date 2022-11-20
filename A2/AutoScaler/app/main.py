@@ -3,7 +3,7 @@ from app import webapp_autoscaler
 from flask import json
 from flask import jsonify
 
-from app.config import db_config, ami_id
+from .config import db_config, ami_id, aws_access_key, aws_secret_key
 import mysql.connector
 import boto3
 import requests
@@ -49,7 +49,11 @@ cd A2
 bash start.sh'''
 
 def create_ec2():
-    ec2 = boto3.resource('ec2')
+    ec2 = boto3.resource('ec2',
+                         region_name='us-east-1',
+                         aws_access_key_id=aws_access_key,
+                         aws_secret_access_key=aws_secret_key
+                         )
     instances = ec2.create_instances(
         ImageId=ami_id,
         MinCount=1,
@@ -63,7 +67,11 @@ def create_ec2():
 
 
 def delete_ec2(instance_id):
-    ec2 = boto3.client('ec2')
+    ec2 = boto3.client('ec2',
+                       region_name='us-east-1',
+                       aws_access_key_id=aws_access_key,
+                       aws_secret_access_key=aws_secret_key
+                       )
     ec2.terminate_instances(InstanceIds=[instance_id])
 
 def get_instance_change(miss_rate):
@@ -233,7 +241,11 @@ class read_statistics_2CloudWatch():
         while True:
             print("statistic report2: ", threading.current_thread().name)
             print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            cloudwatch = boto3.client('cloudwatch')
+            cloudwatch = boto3.client('cloudwatch',
+                                      region_name='us-east-1',
+                                      aws_access_key_id=aws_access_key,
+                                      aws_secret_access_key=aws_secret_key
+                                      )
             cnx = get_db()
             cursor = cnx.cursor()
             query = "SELECT InstanceID FROM memcachelist"

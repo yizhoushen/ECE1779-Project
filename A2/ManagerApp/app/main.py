@@ -7,7 +7,7 @@ from flask import json
 from flask import jsonify
 import requests
 import mysql.connector
-from app.config import db_config, ami_id, subnet_id, s3_bucket
+from app.config import db_config, ami_id, subnet_id, s3_bucket, aws_access_key, aws_secret_key
 from datetime import datetime, timedelta, timezone
 import jyserver.Flask as jsf
 import boto3
@@ -70,11 +70,18 @@ user_data = '''#!/bin/bash
 cd /home/ubuntu/ECE1779-Project
 source venv/bin/activate
 cd A2
+sudo chmod 777 ./MemCache/std.log
+sudo chmod 777 ./MemCache/memcache.log
+sudo chmod 777 ./WebFrontend/frontend.log
 bash start.sh'''
 
 
 def create_ec2():
-    ec2 = boto3.resource('ec2')
+    ec2 = boto3.resource('ec2',
+                         region_name='us-east-1',
+                         aws_access_key_id=aws_access_key,
+                         aws_secret_access_key=aws_secret_key
+                         )
     instances = ec2.create_instances(
         ImageId=ami_id,
         MinCount=1,
@@ -88,18 +95,30 @@ def create_ec2():
 
 
 def delete_ec2(instance_id):
-    ec2 = boto3.client('ec2')
+    ec2 = boto3.client('ec2',
+                       region_name='us-east-1',
+                       aws_access_key_id=aws_access_key,
+                       aws_secret_access_key=aws_secret_key
+                       )
     ec2.terminate_instances(InstanceIds=[instance_id])
 
 
 # Create/terminate or Start/Stop the instance?
 def start_ec2(instance_id):
-    ec2 = boto3.client('ec2')
+    ec2 = boto3.client('ec2',
+                       region_name='us-east-1',
+                       aws_access_key_id=aws_access_key,
+                       aws_secret_access_key=aws_secret_key
+                       )
     ec2.start_instances(InstanceIds=[instance_id])
 
 
 def stop_ec2(instance_id):
-    ec2 = boto3.client('ec2')
+    ec2 = boto3.client('ec2',
+                       region_name='us-east-1',
+                       aws_access_key_id=aws_access_key,
+                       aws_secret_access_key=aws_secret_key
+                       )
     ec2.stop_instances(InstanceIds=[instance_id])
 
 
@@ -158,7 +177,11 @@ class read_statistics_2CloudWatch():
                 instanceID_list.append(instance_id)
             all_metric_data = {}
             # instanceID_list = ['string']
-            cloudwatch = boto3.client('cloudwatch')
+            cloudwatch = boto3.client('cloudwatch',
+                                      region_name='us-east-1',
+                                      aws_access_key_id=aws_access_key,
+                                      aws_secret_access_key=aws_secret_key
+                                      )
             for metric in self.MetricName:
                 accumulate_each_metric = {'value': 0}
                 for instanceID in instanceID_list:
@@ -433,12 +456,18 @@ def resize_mem_cache():
                 instance_id = str(instance.id)
                 public_ip = instance.public_ip_address
                 data = {'memcache_id': memcache_id, 'instance_id': instance_id, 'public_ip': public_ip}
-                response = requests.post("http://{}:5001/updateMemcacheInfo".format(public_ip), data=data, timeout=5)
-                res_json = response.json()
-                if res_json['success'] == 'True':
-                    pass
-                else:
-                    return "memcache updateinfo failed"
+                response = None
+                while response == None:
+                    try:
+                        response = requests.post("http://{}:5001/updateMemcacheInfo".format(public_ip), data=data, timeout=5)
+                    except:
+                        pass
+                # response = requests.post("http://{}:5001/updateMemcacheInfo".format(public_ip), data=data, timeout=5)
+                # res_json = response.json()
+                # if res_json['success'] == 'True':
+                #     pass
+                # else:
+                #     return "memcache updateinfo failed"
 
             response = requests.post("http://127.0.0.1:5000/redistribute")
             res_json = response.json()
@@ -485,7 +514,11 @@ def delet_all_data():
     cursor.execute(query)
     cnx.commit()
     # delet all images in S3
-    s3 = boto3.resource('s3')
+    s3 = boto3.resource('s3',
+                        region_name='us-east-1',
+                        aws_access_key_id=aws_access_key,
+                        aws_secret_access_key=aws_secret_key
+                        )
     bucket = s3.Bucket(s3_bucket['name'])
     bucket.objects.all().delete()
     # clear contents in all memcache nodes

@@ -4,17 +4,16 @@ from collections import OrderedDict
 from sys import getsizeof
 import random
 from datetime import datetime, timedelta
-import boto3
 # database
 import mysql.connector
-from app.config import db_config
+from .config import db_config, aws_access_key, aws_secret_key
 
 # flask
 from app import webapp_memcache
 from flask import jsonify, request
 from flask import json
 from flask import render_template
-
+import logging
 # A2
 import boto3
 import cloudwatch
@@ -243,7 +242,6 @@ class PicMemCache(object):
 
             time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
-
     def send_statistics_2CloudWatch(self):
         while True:
             time.sleep(SECONDS_WRITING_2DB_INTERVAL)
@@ -255,7 +253,11 @@ class PicMemCache(object):
                 miss_rate = self.MissNum / self.GetPicRequestNum
 
             print("miss number:", self.MissNum)
-            cloudwatch = boto3.client('cloudwatch')
+            cloudwatch = boto3.client('cloudwatch',
+                                      region_name='us-east-1',
+                                      aws_access_key_id=aws_access_key,
+                                      aws_secret_access_key=aws_secret_key,
+                                      )
 
             global response_from_cloudwatch
             response_from_cloudwatch = cloudwatch.put_metric_data(
@@ -365,6 +367,8 @@ class PicMemCache(object):
 memory1 = PicMemCache()
 # threading.Thread(target=memory1.write_statistics_2db, daemon=True).start()
 threading.Thread(target=memory1.send_statistics_2CloudWatch, daemon=True).start()
+
+
 # threading.Thread(target=memory1.read_statistics_2CoudWatch, daemon=True).start()
 
 
@@ -448,6 +452,7 @@ def refreshConfiguration():
                            message=res)
     return response
 
+
 @webapp_memcache.route('/updateMemcacheInfo', methods=['POST'])
 def updateMemcacheInfo():
     MemcacheID = request.form.get('memcache_id')
@@ -456,6 +461,7 @@ def updateMemcacheInfo():
     memory1.update_memcache_info(InstanceID, PublicIP, MemcacheID)
     response = jsonify(success='True')
     return response
+
 
 # @webapp_memcache.route('/upload', methods=['POST'])
 # def Front_end_upload():
@@ -467,4 +473,5 @@ def updateMemcacheInfo():
 
 @webapp_memcache.route('/', methods=['GET'])
 def main():
-    return render_template("memcache_view.html", memory1=memory1, response_from_cloudwatch=str(response_from_cloudwatch))
+    return render_template("memcache_view.html", memory1=memory1,
+                           response_from_cloudwatch=str(response_from_cloudwatch))
