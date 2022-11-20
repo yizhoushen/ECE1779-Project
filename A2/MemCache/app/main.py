@@ -82,8 +82,8 @@ class PicMemCache(object):
         self.GetPicRequestNum = 0
 
         self.MemcacheID = 0
-        # self.InstanceID = 'current runing instance id'
-        self.InstanceID = 'string'
+        self.InstanceID = 'current runing instance id'
+        # self.InstanceID = 'string'
         self.PublicIP = '127.0.0.1'
 
         self.MC = OrderedDict()

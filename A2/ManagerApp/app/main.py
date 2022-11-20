@@ -27,10 +27,14 @@ def connect_to_database():
                                    database=db_config['database'])
 
 
+# def get_db():
+#     db = getattr(g, '_database', None)
+#     if db is None:
+#         db = g._database = connect_to_database()
+#     return db
+
 def get_db():
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = g._database = connect_to_database()
+    db = connect_to_database()
     return db
 
 
@@ -43,11 +47,15 @@ def get_db():
 #     count = row[0]
 #     return count
 
-@webapp_manager.teardown_appcontext
-def teardown_db(exception):
-    db = getattr(g, '_database', None)
-    if db is not None:
-        db.close()
+# @webapp_manager.teardown_appcontext
+# def teardown_db(exception):
+#     db = getattr(g, '_database', None)
+#     if db is not None:
+#         db.close()
+
+
+# @webapp_manager.before_request
+# def make_db():
 
 
 # global
@@ -158,6 +166,7 @@ class read_statistics_2CloudWatch():
             print("statistic report2: ", threading.current_thread().name)
             print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             time.sleep(SECONDS_READING_2DB_INTERVAL)
+            global instanceID_list
             cnx = get_db()
             cursor = cnx.cursor()
             query = "SELECT InstanceID FROM memcachelist"
@@ -167,7 +176,7 @@ class read_statistics_2CloudWatch():
                 instanceID_list.append(instance_id)
             print(instanceID_list)
             all_metric_data = {}
-            instanceID_list = ['string']
+            # instanceID_list = ['string']
             cloudwatch = boto3.client('cloudwatch')
             for metric in self.MetricName:
                 accumulate_each_metric = {'value': 0}
@@ -221,111 +230,6 @@ class read_statistics_2CloudWatch():
             aggregated_statistics.append(all_metric_data)
             print(all_metric_data)
             print("##############################", aggregated_statistics)
-
-    ##################################################################################
-    # def read_statistics(self):
-    #     while True:
-    #         print("statistic report2: ", threading.current_thread().name)
-    #         print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    #         time.sleep(SECONDS_READING_2DB_INTERVAL)
-    #         statistic = {}
-    #         data_each_time = {}
-    #         cloudwatch = boto3.client('cloudwatch')
-    #         for metric in self.MetricName:
-    #             cloudwatch_response = cloudwatch.get_metric_statistics(
-    #                 Namespace='statistical_variable_of_one_instance',
-    #                 MetricName=metric,
-    #                 Dimensions=[
-    #                     {
-    #                         'Name': 'instance-id',
-    #                         'Value': 'string'
-    #                     },
-    #                 ],
-    #                 StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
-    #                 EndTime=datetime.utcnow(),
-    #                 Period=60,
-    #                 Statistics=[
-    #                     'Sum', 'SampleCount'
-    #                 ],
-    #             )
-    #             print(cloudwatch_response)
-    #             if len(cloudwatch_response['Datapoints']) != 0:
-    #                 statistic[metric] = cloudwatch_response['Datapoints'][0]['Sum']
-    #             else:
-    #                 statistic[metric] = None
-    #
-    #         if statistic['single_GetPicRequestNum'] is None:
-    #             print("No DATA so far!!!!")
-    #         else:
-    #             if statistic['single_GetPicRequestNum'] != 0:
-    #                 self.avg_MissRate = round(statistic['single_miss_num'] / statistic['single_GetPicRequestNum'], 3)
-    #                 self.avg_HitRate = round(statistic['singe_hit_num'] / statistic['single_GetPicRequestNum'], 3)
-    #         statistic["avg_MissRate"] = self.avg_MissRate
-    #         statistic["avg_HitRate"] = self.avg_HitRate
-    #
-    #         if len(cloudwatch_response['Datapoints']) != 0:
-    #             time_each_data = cloudwatch_response['Datapoints'][0]['Timestamp'].astimezone(tzutc_Toronto)
-    #         else:
-    #             time_each_data = "Null"
-    #         data_each_time["time"] = time_each_data
-    #         data_each_time["statistic"] = statistic
-    #         self.cloudwatch_data.append(data_each_time)
-    #         print(data_each_time)
-
-
-###########################################################################################
-
-
-# cloudwatch_sum_miss_num = cloudwatch.get_metric_statistics(
-#     Namespace='statistical_variable_of_one_instance',
-#     MetricName='single_miss_num',
-#     Dimensions=[
-#         {
-#             'Name': 'instance-id',
-#             'Value': 'string'
-#         },
-#     ],
-#     StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
-#     EndTime=datetime.utcnow(),
-#     Period=60,
-#     Statistics=[
-#         'Sum',
-#     ],
-#
-# )
-# print(cloudwatch_sum_miss_num)
-#
-# cloudwatch_sum_GetPicRequestNum = cloudwatch.get_metric_statistics(
-#     Namespace='statistical_variable_of_one_instance',
-#     MetricName='single_GetPicRequestNum',
-#     Dimensions=[
-#         {
-#             'Name': 'instance-id',
-#             'Value': 'string'
-#         },
-#     ],
-#     StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
-#     EndTime=datetime.utcnow(),
-#     Period=60,
-#     Statistics=[
-#         'Sum',
-#     ],
-#
-# )
-# print(cloudwatch_sum_GetPicRequestNum)
-#
-# if len(cloudwatch_sum_miss_num['Datapoints']) == 0 or len(
-#         cloudwatch_sum_GetPicRequestNum['Datapoints']) == 0:
-#     self.MissNum = -2
-# else:
-#     self.MissNum = cloudwatch_sum_miss_num['Datapoints'][0]['Sum']
-#     self.GetPicRequestNum = cloudwatch_sum_GetPicRequestNum['Datapoints'][0]['Sum']
-#     if self.GetPicRequestNum == 0:
-#         self.avg_MissRate = -1
-#     else:
-#         self.avg_MissRate = self.MissNum / self.GetPicRequestNum
-#     print("average miss rate: " + str(self.avg_MissRate))
-# print("Miss number: " + str(self.MissNum))
 
 
 statistic_cloudwatch = read_statistics_2CloudWatch()

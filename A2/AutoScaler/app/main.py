@@ -263,10 +263,10 @@ class read_statistics_2CloudWatch():
                                         ]
                                     },
                                     'Period': 60,
-
+                                    'Stat': 'Maximum',
                                 },
                                 'ReturnData': True,
-                                'Stat': 'Maximum',
+                                # 'Stat': 'Maximum',
                             },
                         ],
                         StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
