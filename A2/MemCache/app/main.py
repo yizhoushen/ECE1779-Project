@@ -4,7 +4,6 @@ from collections import OrderedDict
 from sys import getsizeof
 import random
 from datetime import datetime, timedelta
-import boto3
 # database
 import mysql.connector
 from app.config import db_config
@@ -254,7 +253,7 @@ class PicMemCache(object):
                 miss_rate = self.MissNum / self.GetPicRequestNum
 
             print("miss number:", self.MissNum)
-            cloudwatch = boto3.client('cloudwatch')
+            cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
 
             global response_from_cloudwatch
             response_from_cloudwatch = cloudwatch.put_metric_data(
@@ -482,7 +481,7 @@ def testput():
     try:
         global response_from_cloudwatch
         logging.info("try initiating cloudwatch")
-        cloudwatch = boto3.client('cloudwatch')
+        cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
         logging.info("try submitting data")
         response_from_cloudwatch = cloudwatch.put_metric_data(
             Namespace='statistical_variable_of_one_instance',
