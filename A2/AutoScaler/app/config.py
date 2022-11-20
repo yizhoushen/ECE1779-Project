@@ -21,4 +21,4 @@ db_config = {'user': 'dbadmin',
 
 aws_access_key = "AKIAYCMAR64CBTBYTIQC"
 aws_secret_key = "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"
-ami_id = 'ami-09047bd5954627aa9'
+ami_id = 'ami-0988d5433d4196604'
