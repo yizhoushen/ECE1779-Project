@@ -265,7 +265,7 @@ class PicMemCache(object):
                         'MetricName': 'single_ItemNum',
                         'Dimensions': [
                             {
-                                'Name': 'instance-id',
+                                'Name': 'instanceID',
                                 'Value': self.InstanceID
                             },
                         ],
@@ -277,7 +277,7 @@ class PicMemCache(object):
                         'MetricName': 'single_currentMemCache',
                         'Dimensions': [
                             {
-                                'Name': 'instance-id',
+                                'Name': 'instanceID',
                                 'Value': self.InstanceID
                             },
                         ],
@@ -289,7 +289,7 @@ class PicMemCache(object):
                         'MetricName': 'single_TotalRequestNum',
                         'Dimensions': [
                             {
-                                'Name': 'instance-id',
+                                'Name': 'instanceID',
                                 'Value': self.InstanceID
                             },
                         ],
@@ -301,7 +301,7 @@ class PicMemCache(object):
                         'MetricName': 'single_GetPicRequestNum',
                         'Dimensions': [
                             {
-                                'Name': 'instance-id',
+                                'Name': 'instanceID',
                                 'Value': self.InstanceID
                             },
                         ],
@@ -313,7 +313,7 @@ class PicMemCache(object):
                         'MetricName': 'single_miss_rate',
                         'Dimensions': [
                             {
-                                'Name': 'instance-id',
+                                'Name': 'instanceID',
                                 'Value': self.InstanceID
                             },
                         ],
@@ -325,7 +325,7 @@ class PicMemCache(object):
                         'MetricName': 'single_hit_rate',
                         'Dimensions': [
                             {
-                                'Name': 'instance-id',
+                                'Name': 'instanceID',
                                 'Value': self.InstanceID
                             },
                         ],
@@ -337,7 +337,7 @@ class PicMemCache(object):
                         'MetricName': 'single_miss_num',
                         'Dimensions': [
                             {
-                                'Name': 'instance-id',
+                                'Name': 'instanceID',
                                 'Value': self.InstanceID
                             },
                         ],
@@ -349,7 +349,7 @@ class PicMemCache(object):
                         'MetricName': 'singe_hit_num',
                         'Dimensions': [
                             {
-                                'Name': 'instance-id',
+                                'Name': 'instanceID',
                                 'Value': self.InstanceID
                             },
                         ],

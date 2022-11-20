@@ -1,5 +1,6 @@
 import threading
 
+import numpy as np
 from flask import render_template, url_for, request, g
 from app import webapp_manager
 from flask import json
@@ -128,18 +129,6 @@ class App:
         new_node_count = self.count
 
 
-@webapp_manager.route('/all_instanceID', methods=['GET'])
-def read_instanceID():
-    global instanceID_list
-    cnx = get_db()
-    cursor = cnx.cursor()
-    query = "SELECT InstanceID FROM memcachelist"
-    cursor.execute(query)
-    instanceID_list = []
-    for row in cursor:
-        instance_id = row[0]
-        instanceID_list.append(instance_id)
-    return instanceID_list
 
 
 class read_statistics_2CloudWatch():
@@ -151,15 +140,6 @@ class read_statistics_2CloudWatch():
                            'single_GetPicRequestNum', 'single_miss_num', 'singe_hit_num']
         self.cloudwatch_data = aggregated_statistics
 
-    # def read_statistics(self):
-    #     global instanceID_list
-    #     while True:
-    #         print("statistic report2: ", threading.current_thread().name)
-    #         print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    #         time.sleep(SECONDS_READING_2DB_INTERVAL)
-    #         cloudwatch = boto3.client('cloudwatch')
-    # instanceID_list = read_instanceID()
-    #
 
     def read_statistics(self):
         while True:
@@ -171,10 +151,11 @@ class read_statistics_2CloudWatch():
             cursor = cnx.cursor()
             query = "SELECT InstanceID FROM memcachelist"
             cursor.execute(query)
+            instanceID_list = []
             for row in cursor:
                 instance_id = row[0]
+                print("the instance id read: ", instance_id)
                 instanceID_list.append(instance_id)
-            print(instanceID_list)
             all_metric_data = {}
             # instanceID_list = ['string']
             cloudwatch = boto3.client('cloudwatch')
@@ -191,7 +172,7 @@ class read_statistics_2CloudWatch():
                                         'MetricName': metric,
                                         'Dimensions': [
                                             {
-                                                'Name': 'instance-id',
+                                                'Name': 'instanceID',
                                                 'Value': instanceID
                                             },
                                         ]
@@ -213,7 +194,7 @@ class read_statistics_2CloudWatch():
                     # print(cloudwatch_response['MetricDataResults'][0]['Label'])
                     if len(cloudwatch_response['MetricDataResults'][0]['Values']) == 0:
                         continue
-                    accumulate_each_metric[str(instanceID)] = cloudwatch_response['MetricDataResults'][0]['Id']
+                    accumulate_each_metric[str(instanceID)] = cloudwatch_response['MetricDataResults'][0]['Values'][-1]
                     accumulate_each_metric['value'] += cloudwatch_response['MetricDataResults'][0]['Values'][-1]
 
                 all_metric_data[metric] = accumulate_each_metric
@@ -228,8 +209,11 @@ class read_statistics_2CloudWatch():
             all_metric_data['Timestamps'] = cloudwatch_response['MetricDataResults'][0]['Timestamps'][-1].astimezone(
                 tzutc_Toronto)
             aggregated_statistics.append(all_metric_data)
-            print(all_metric_data)
-            print("##############################", aggregated_statistics)
+            # print("**************", all_metric_data)
+            # print("##############################", aggregated_statistics)
+            cutoff_time = (datetime.utcnow() - timedelta(minutes=30)).replace(tzinfo=pytz.UTC).astimezone(tzutc_Toronto)
+            if cutoff_time > aggregated_statistics[0]['Timestamps']:
+                del aggregated_statistics[0]
 
 
 statistic_cloudwatch = read_statistics_2CloudWatch()

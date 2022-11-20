@@ -257,7 +257,7 @@ class read_statistics_2CloudWatch():
                                         'MetricName': metric,
                                         'Dimensions': [
                                             {
-                                                'Name': 'instance-id',
+                                                'Name': 'instanceID',
                                                 'Value': instanceID
                                             },
                                         ]
@@ -266,7 +266,6 @@ class read_statistics_2CloudWatch():
                                     'Stat': 'Maximum',
                                 },
                                 'ReturnData': True,
-                                # 'Stat': 'Maximum',
                             },
                         ],
                         StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),

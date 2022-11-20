@@ -14,20 +14,7 @@
         <th>GetPicRequests</th>
         <th>Time</th>
     </thead> 
-<!--    {% for row in aggregated_statistics %}-->
-<!--        {% if row["time"] > start_time %}-->
-<!--            <tr>-->
-<!--                <td>{{node_num}}</td>-->
-<!--                <td>{{ row["statistic"]['single_ItemNum']}}</td>-->
-<!--                <td>{{ row["statistic"]['single_currentMemCache']}}</td>-->
-<!--                <td>{{ row["statistic"]['single_TotalRequestNum']}}</td>-->
-<!--                <td>{{ row["statistic"]['avg_MissRate']}}</td>-->
-<!--                <td>{{ row["statistic"]['avg_HitRate']}}</td>-->
-<!--                <td>{{ row["statistic"]['single_GetPicRequestNum']}}</td>-->
-<!--                <td>{{ row["time"]}}</td>-->
-<!--            </tr>-->
-<!--        {% endif %}-->
-<!--    {% endfor %}-->
+
         {% for row in aggregated_statistics %}
             {% if row["Timestamps"] > start_time %}
                 <tr>
@@ -35,8 +22,8 @@
                     <td>{{ row['single_ItemNum']['value']}}</td>
                     <td>{{ row['single_currentMemCache']['value']}}</td>
                     <td>{{ row['single_TotalRequestNum']['value']}}</td>
-                    <td>{{ row['avg_MissRate']['value']}}</td>
-                    <td>{{ row['avg_HitRate']['value']}}</td>
+                    <td>{{ row['avg_MissRate']}}</td>
+                    <td>{{ row['avg_HitRate']}}</td>
                     <td>{{ row['single_GetPicRequestNum']['value']}}</td>
                     <td>{{ row["Timestamps"]}}</td>
                 </tr>
