@@ -6,13 +6,17 @@
 #              'database': 'ece1779project'}
 
 # config of local database
-db_config = {'user': 'dbadmin',
-             'password': 'admin1234',
+# db_config = {'user': 'dbadmin',
+#              'password': 'admin1234',
+#              'host': '127.0.0.1',
+#              'database': 'ece1779project'}
+
+# config of aws ec2 database
+db_config = {'user': 'root',
+             'password': 'ece1779pass',
              'host': '127.0.0.1',
              'database': 'ece1779project'}
 
-# config of aws ec2 database
-# db_config = {'user': 'root',
-#              'password': 'ece1779pass',
-#              'host': '127.0.0.1',
-#              'database': 'ece1779project'}
+
+aws_access_key = "AKIAYCMAR64CBTBYTIQC"
+aws_secret_key = "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"
