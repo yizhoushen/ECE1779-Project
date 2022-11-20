@@ -27,3 +27,6 @@ ami_id = '<AMI ID>'
 subnet_id = '<Subnet ID>'
 
 s3_bucket = {'name': 'bucket-ece1779-project-new'}
+
+aws_access_key = "AKIAYCMAR64CBTBYTIQC"
+aws_secret_key = "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"

@@ -6,7 +6,7 @@ from flask import json
 from flask import jsonify
 import requests
 import mysql.connector
-from app.config import db_config, ami_id, subnet_id, s3_bucket
+from app.config import db_config, ami_id, subnet_id, s3_bucket, aws_access_key, aws_secret_key
 from datetime import datetime, timedelta, timezone
 import jyserver.Flask as jsf
 import boto3
@@ -73,7 +73,11 @@ bash start.sh'''
 
 
 def create_ec2():
-    ec2 = boto3.resource('ec2')
+    ec2 = boto3.resource('ec2',
+                         region_name='us-east-1',
+                         aws_access_key_id=aws_access_key,
+                         aws_secret_access_key=aws_secret_key
+                         )
     instances = ec2.create_instances(
         ImageId=ami_id,
         MinCount=1,
@@ -87,18 +91,30 @@ def create_ec2():
 
 
 def delete_ec2(instance_id):
-    ec2 = boto3.client('ec2')
+    ec2 = boto3.client('ec2',
+                       region_name='us-east-1',
+                       aws_access_key_id=aws_access_key,
+                       aws_secret_access_key=aws_secret_key
+                       )
     ec2.terminate_instances(InstanceIds=[instance_id])
 
 
 # Create/terminate or Start/Stop the instance?
 def start_ec2(instance_id):
-    ec2 = boto3.client('ec2')
+    ec2 = boto3.client('ec2',
+                       region_name='us-east-1',
+                       aws_access_key_id=aws_access_key,
+                       aws_secret_access_key=aws_secret_key
+                       )
     ec2.start_instances(InstanceIds=[instance_id])
 
 
 def stop_ec2(instance_id):
-    ec2 = boto3.client('ec2')
+    ec2 = boto3.client('ec2',
+                       region_name='us-east-1',
+                       aws_access_key_id=aws_access_key,
+                       aws_secret_access_key=aws_secret_key
+                       )
     ec2.stop_instances(InstanceIds=[instance_id])
 
 
@@ -177,7 +193,11 @@ class read_statistics_2CloudWatch():
             print(instanceID_list)
             all_metric_data = {}
             # instanceID_list = ['string']
-            cloudwatch = boto3.client('cloudwatch')
+            cloudwatch = boto3.client('cloudwatch',
+                                      region_name='us-east-1',
+                                      aws_access_key_id=aws_access_key,
+                                      aws_secret_access_key=aws_secret_key
+                                      )
             for metric in self.MetricName:
                 accumulate_each_metric = {'value': 0}
                 for instanceID in instanceID_list:
@@ -501,7 +521,11 @@ def delet_all_data():
     cursor.execute(query)
     cnx.commit()
     # delet all images in S3
-    s3 = boto3.resource('s3')
+    s3 = boto3.resource('s3',
+                        region_name='us-east-1',
+                        aws_access_key_id=aws_access_key,
+                        aws_secret_access_key=aws_secret_key
+                        )
     bucket = s3.Bucket(s3_bucket['name'])
     bucket.objects.all().delete()
     # clear contents in all memcache nodes

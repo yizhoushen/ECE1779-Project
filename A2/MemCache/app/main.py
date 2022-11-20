@@ -6,7 +6,7 @@ import random
 from datetime import datetime, timedelta
 # database
 import mysql.connector
-from app.config import db_config
+from .config import db_config, aws_access_key, aws_secret_key
 
 # flask
 from app import webapp_memcache
@@ -253,7 +253,11 @@ class PicMemCache(object):
                 miss_rate = self.MissNum / self.GetPicRequestNum
 
             print("miss number:", self.MissNum)
-            cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+            cloudwatch = boto3.client('cloudwatch',
+                                      region_name='us-east-1',
+                                      aws_access_key_id=aws_access_key,
+                                      aws_secret_access_key=aws_secret_key,
+                                      )
 
             global response_from_cloudwatch
             response_from_cloudwatch = cloudwatch.put_metric_data(
@@ -481,7 +485,11 @@ def testput():
     try:
         global response_from_cloudwatch
         logging.info("try initiating cloudwatch")
-        cloudwatch = boto3.client('cloudwatch', region_name='us-east-1')
+        cloudwatch = boto3.client('cloudwatch',
+                                  region_name='us-east-1',
+                                  aws_access_key_id=aws_access_key,
+                                  aws_secret_access_key=aws_secret_key,
+                                  )
         logging.info("try submitting data")
         response_from_cloudwatch = cloudwatch.put_metric_data(
             Namespace='statistical_variable_of_one_instance',

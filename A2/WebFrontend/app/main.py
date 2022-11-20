@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from collections import OrderedDict
 
 import mysql.connector
-from app.config import db_config, ami_id, subnet_id, s3_bucket
+from app.config import db_config, ami_id, subnet_id, s3_bucket, aws_access_key, aws_secret_key
 import sys
 
 import tempfile
@@ -127,7 +127,11 @@ def image_upload():
     cnx.commit()
 
     # Save file to S3
-    s3 = boto3.client('s3')
+    s3 = boto3.client('s3',
+                      region_name='us-east-1',
+                      aws_access_key_id=aws_access_key,
+                      aws_secret_access_key=aws_secret_key
+                      )
     s3.upload_fileobj(new_image, s3_bucket['name'], dbimage_path)
 
     write_end = time.time()
@@ -218,7 +222,11 @@ def image_display():
         image_path = row[0]
         
         # bucket = s3.Bucket(s3_bucket['name'])
-        s3 = boto3.client('s3')
+        s3 = boto3.client('s3',
+                          region_name='us-east-1',
+                          aws_access_key_id=aws_access_key,
+                          aws_secret_access_key=aws_secret_key
+                          )
         image_file = s3.get_object(Bucket=s3_bucket['name'], Key=image_path)['Body'].read()
         encoded_string = base64.b64encode(image_file).decode('utf-8')
         print("Getting from local file system: \n {}".format(encoded_string[:10]))
