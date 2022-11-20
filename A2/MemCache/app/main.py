@@ -14,7 +14,7 @@ from app import webapp_memcache
 from flask import jsonify, request
 from flask import json
 from flask import render_template
-
+import logging
 # A2
 import boto3
 import cloudwatch
@@ -243,7 +243,6 @@ class PicMemCache(object):
 
             time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
-
     def send_statistics_2CloudWatch(self):
         while True:
             time.sleep(SECONDS_WRITING_2DB_INTERVAL)
@@ -365,6 +364,8 @@ class PicMemCache(object):
 memory1 = PicMemCache()
 # threading.Thread(target=memory1.write_statistics_2db, daemon=True).start()
 threading.Thread(target=memory1.send_statistics_2CloudWatch, daemon=True).start()
+
+
 # threading.Thread(target=memory1.read_statistics_2CoudWatch, daemon=True).start()
 
 
@@ -448,6 +449,7 @@ def refreshConfiguration():
                            message=res)
     return response
 
+
 @webapp_memcache.route('/updateMemcacheInfo', methods=['POST'])
 def updateMemcacheInfo():
     MemcacheID = request.form.get('memcache_id')
@@ -456,6 +458,7 @@ def updateMemcacheInfo():
     memory1.update_memcache_info(InstanceID, PublicIP, MemcacheID)
     response = jsonify(success='True')
     return response
+
 
 # @webapp_memcache.route('/upload', methods=['POST'])
 # def Front_end_upload():
@@ -467,4 +470,131 @@ def updateMemcacheInfo():
 
 @webapp_memcache.route('/', methods=['GET'])
 def main():
-    return render_template("memcache_view.html", memory1=memory1, response_from_cloudwatch=str(response_from_cloudwatch))
+    return render_template("memcache_view.html", memory1=memory1,
+                           response_from_cloudwatch=str(response_from_cloudwatch))
+
+@webapp_memcache.route("/testput", methods=['POST'])
+def testput():
+
+
+
+
+    try:
+        global response_from_cloudwatch
+        logging.info("try initiating cloudwatch")
+        cloudwatch = boto3.client('cloudwatch')
+        logging.info("try submitting data")
+        response_from_cloudwatch = cloudwatch.put_metric_data(
+            Namespace='statistical_variable_of_one_instance',
+            MetricData=[
+                {
+                    'MetricName': 'single_ItemNum',
+                    'Dimensions': [
+                        {
+                            'Name': 'instance-id',
+                            'Value': 'zihe'
+                        },
+                    ],
+                    'Value': 111,
+                    'StorageResolution': StorageResolution,
+                    'Unit': 'Count'
+                },
+
+                {
+                    'MetricName': 'single_currentMemCache',
+                    'Dimensions': [
+                        {
+                            'Name': 'instance-id',
+                            'Value': 'zihe'
+                        },
+                    ],
+                    'Value': 222,
+                    'StorageResolution': StorageResolution,
+                    'Unit': 'Count'
+                },
+
+                {
+                    'MetricName': 'single_TotalRequestNum',
+                    'Dimensions': [
+                        {
+                            'Name': 'instance-id',
+                            'Value': 'zihe'
+                        },
+                    ],
+                    'Value': 333,
+                    'StorageResolution': StorageResolution,
+                    'Unit': 'Count'
+                },
+
+                {
+                    'MetricName': 'single_GetPicRequestNum',
+                    'Dimensions': [
+                        {
+                            'Name': 'instance-id',
+                            'Value': 'zihe'
+                        },
+                    ],
+                    'Value': 444,
+                    'StorageResolution': StorageResolution,
+                    'Unit': 'Count'
+                },
+
+                {
+                    'MetricName': 'single_miss_rate',
+                    'Dimensions': [
+                        {
+                            'Name': 'instance-id',
+                            'Value': 'zihe'
+                        },
+                    ],
+                    'Value': 555,
+                    'StorageResolution': StorageResolution,
+                    'Unit': 'Count'
+                },
+
+                {
+                    'MetricName': 'single_hit_rate',
+                    'Dimensions': [
+                        {
+                            'Name': 'instance-id',
+                            'Value': 'zihe'
+                        },
+                    ],
+                    'Value': 666,
+                    'StorageResolution': StorageResolution,
+                    'Unit': 'Count'
+                },
+
+                {
+                    'MetricName': 'single_miss_num',
+                    'Dimensions': [
+                        {
+                            'Name': 'instance-id',
+                            'Value': 'zihe'
+                        },
+                    ],
+                    'Value': 777,
+                    'StorageResolution': StorageResolution,
+                    'Unit': 'Count'
+                },
+
+                {
+                    'MetricName': 'singe_hit_num',
+                    'Dimensions': [
+                        {
+                            'Name': 'instance-id',
+                            'Value': 'zihe'
+                        },
+                    ],
+                    'Value': 888,
+                    'StorageResolution': StorageResolution,
+                    'Unit': 'Count'
+                }
+            ]
+        )
+    except Exception as e:
+        logging.error(e)
+        return jsonify({"success": False})
+    logging.info("successfully!")
+    return jsonify({"success": True})
+    # print(response_from_cloudwatch)
