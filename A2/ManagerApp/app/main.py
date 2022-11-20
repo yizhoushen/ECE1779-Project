@@ -69,6 +69,9 @@ user_data = '''#!/bin/bash
 cd /home/ubuntu/ECE1779-Project
 source venv/bin/activate
 cd A2
+sudo chmod 777 ./MemCache/std.log
+sudo chmod 777 ./MemCache/memcache.log
+sudo chmod 777 ./WebFrontend/frontend.log
 bash start.sh'''
 
 
