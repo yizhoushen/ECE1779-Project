@@ -245,6 +245,7 @@ class PicMemCache(object):
 
     def send_statistics_2CloudWatch(self):
         while True:
+            time.sleep(SECONDS_WRITING_2DB_INTERVAL)
             print("statistic report1: ", threading.current_thread().name)
             print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             if self.GetPicRequestNum == 0:
@@ -254,6 +255,105 @@ class PicMemCache(object):
 
             print("miss number:", self.MissNum)
             cloudwatch = boto3.client('cloudwatch')
+
+            Temp_MetricData = [
+                    {
+                        'MetricName': 'single_ItemNum',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.InstanceID
+                            },
+                        ],
+                        'Value': self.ItemNum,
+                        'StorageResolution': StorageResolution,
+                    },
+
+                    {
+                        'MetricName': 'single_currentMemCache',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.InstanceID
+                            },
+                        ],
+                        'Value': self.currentMemCache,
+                        'StorageResolution': StorageResolution,
+                    },
+
+                    {
+                        'MetricName': 'single_TotalRequestNum',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.InstanceID
+                            },
+                        ],
+                        'Value': self.TotalRequestNum,
+                        'StorageResolution': StorageResolution,
+                    },
+
+                    {
+                        'MetricName': 'single_GetPicRequestNum',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.InstanceID
+                            },
+                        ],
+                        'Value': self.GetPicRequestNum,
+                        'StorageResolution': StorageResolution,
+                    },
+
+                    {
+                        'MetricName': 'single_miss_rate',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.InstanceID
+                            },
+                        ],
+                        'Value': miss_rate,
+                        'StorageResolution': StorageResolution,
+                    },
+
+                    {
+                        'MetricName': 'single_hit_rate',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.InstanceID
+                            },
+                        ],
+                        'Value': -1 if self.GetPicRequestNum == 0 else self.HitNum / self.GetPicRequestNum,
+                        'StorageResolution': StorageResolution,
+                    },
+
+                    {
+                        'MetricName': 'single_miss_num',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.InstanceID
+                            },
+                        ],
+                        'Value': self.MissNum,
+                        'StorageResolution': StorageResolution,
+                    },
+
+                    {
+                        'MetricName': 'singe_hit_num',
+                        'Dimensions': [
+                            {
+                                'Name': 'instance-id',
+                                'Value': self.InstanceID
+                            },
+                        ],
+                        'Value': self.HitNum,
+                        'StorageResolution': StorageResolution,
+                    }
+                ]
+
             cloudwatch.put_metric_data(
                 Namespace='statistical_variable_of_one_instance',
                 MetricData=[
@@ -354,7 +454,8 @@ class PicMemCache(object):
                     }
                 ]
             )
-            time.sleep(SECONDS_WRITING_2DB_INTERVAL)
+            print(Temp_MetricData)
+            # time.sleep(SECONDS_WRITING_2DB_INTERVAL)
 
 
 memory1 = PicMemCache()
