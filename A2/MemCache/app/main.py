@@ -22,8 +22,8 @@ import socket
 from botocore.exceptions import ClientError
 
 SECONDS_WRITING_2DB_INTERVAL = 5
-StorageResolution = 1
 response_from_cloudwatch = {}
+StorageResolution = 60
 
 
 # SECONDS_WRITING_2DB_INTERVAL = 5  #for test
@@ -82,7 +82,7 @@ class PicMemCache(object):
         self.GetPicRequestNum = 0
 
         self.MemcacheID = 0
-        # self.InstanceID = 'Current Instance ID'
+        # self.InstanceID = 'current runing instance id'
         self.InstanceID = 'string'
         self.PublicIP = '127.0.0.1'
 
