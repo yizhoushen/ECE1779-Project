@@ -17,4 +17,4 @@ db_config = {'user': 'dbadmin',
 #              'host': '127.0.0.1',
 #              'database': 'ece1779project'}
 
-ami_id = 'ami-05e6ac2c8a5264ff0'
+ami_id = 'ami-098f13b542258e939'
