@@ -13,7 +13,7 @@
 
 # config of aws ec2 database
 db_config = {'user': 'root',
-             'password': 'ece1779',
+             'password': 'ece1779pass',
              'host': '127.0.0.1',
              'database': 'ece1779project'}
 
