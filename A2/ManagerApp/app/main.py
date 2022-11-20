@@ -146,9 +146,9 @@ class read_statistics_2CloudWatch():
                             'Value': 'string'
                         },
                     ],
-                    StartTime=datetime.utcnow() - timedelta(seconds=1 * 5),
+                    StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
                     EndTime=datetime.utcnow(),
-                    Period=5,
+                    Period=60,
                     Statistics=[
                         'Sum', 'SampleCount',
                     ],
