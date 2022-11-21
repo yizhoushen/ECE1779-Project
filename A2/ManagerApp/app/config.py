@@ -19,7 +19,7 @@ db_config = {'user': 'admin',
 
 # todo
 # need ami_id and subnet_id for ec2
-ami_id = 'ami-0e1ab4a1d132ff11d'
+ami_id = 'ami-07bf503260d4ce676'
 subnet_id = '<Subnet ID>'
 
 s3_bucket = {'name': 'bucket-ece1779-project-new'}
