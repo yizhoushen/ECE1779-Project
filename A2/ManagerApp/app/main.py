@@ -62,9 +62,17 @@ def get_db():
 aggregated_statistics = []
 tzutc_Toronto = timezone(timedelta(hours=-5))
 instanceID_list = []
-new_node_count = 0
+new_node_count = 1
+global_curr_node_count = 1
+global_curr_node_list = []
 memcache_id_list = {}
 memcache_ip_list = {}
+
+max_expand_threshold = 0.0
+min_shrink_threshold = 0.0
+ratio_expand_pool = 0.0
+ratio_shrink_pool = 0.0
+
 user_data = '''#!/bin/bash
 cd /home/ubuntu/ECE1779-Project
 source venv/bin/activate
@@ -165,6 +173,7 @@ class read_statistics_2CloudWatch():
             print("CurrentTime", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             time.sleep(SECONDS_READING_2DB_INTERVAL)
             global instanceID_list
+            global global_curr_node_list
             cnx = get_db()
             cursor = cnx.cursor()
             query = "SELECT InstanceID FROM memcachelist"
@@ -187,7 +196,7 @@ class read_statistics_2CloudWatch():
                     cloudwatch_response = cloudwatch.get_metric_data(
                         MetricDataQueries=[
                             {
-                                'Id': str.lower(instanceID).replace(" ", ""),
+                                'Id': str.lower(instanceID).replace(" ", "").replace("-", "_"),
                                 'MetricStat': {
                                     'Metric': {
                                         'Namespace': 'statistical_variable_of_one_instance',
@@ -236,6 +245,7 @@ class read_statistics_2CloudWatch():
             cutoff_time = (datetime.utcnow() - timedelta(minutes=30)).replace(tzinfo=pytz.UTC).astimezone(tzutc_Toronto)
             if cutoff_time > aggregated_statistics[0]['Timestamps']:
                 del aggregated_statistics[0]
+            global_curr_node_list.append(global_curr_node_count)
 
 
 statistic_cloudwatch = read_statistics_2CloudWatch()
@@ -244,14 +254,16 @@ threading.Thread(target=statistic_cloudwatch.read_statistics, daemon=True).start
 
 @webapp_manager.route('/statistics', methods=['GET'])
 def statistics():
-    cnx = get_db()
-    cursor = cnx.cursor()
-    query = '''SELECT COUNT(*) FROM memcachelist '''
-    cursor.execute(query)
-    node_num = cursor.fetchone()[0]
+    # cnx = get_db()
+    # cursor = cnx.cursor()
+    # query = '''SELECT COUNT(*) FROM memcachelist '''
+    # cursor.execute(query)
+    # node_num = cursor.fetchone()[0]
+    len_list = len(aggregated_statistics)
     start_time = (datetime.utcnow() - timedelta(minutes=30)).replace(tzinfo=pytz.UTC).astimezone(tzutc_Toronto)
     return render_template("statistics.html", title="Memory Cache Statistics",
-                           aggregated_statistics=aggregated_statistics, node_num=node_num, start_time=start_time)
+                           aggregated_statistics=aggregated_statistics, global_curr_node_list=global_curr_node_list, 
+                           len_list=len_list, start_time=start_time)
 
 
 @webapp_manager.route('/config_form', methods=['GET'])
@@ -276,10 +288,11 @@ def config_mem_cache():
         if 'memcache_policy' not in request.form:
             return "Missing MemCache Replacement Policy"
 
-        memcache_szie = request.form.get('memcache_size')
+        memcache_size_mb = request.form.get('memcache_size')
+        memcache_size = float(memcache_size_mb) * 1024 * 1024
         memcache_policy = request.form.get('memcache_policy')
 
-        if memcache_szie == '':
+        if memcache_size == '':
             return 'MemCache size is empty'
         if memcache_policy == '':
             return 'MemCache Replacement Policy is empty'
@@ -294,7 +307,7 @@ def config_mem_cache():
                         ReplacePolicy = %s
                     WHERE id = 1'''
 
-        cursor.execute(query, (memcache_szie, int(memcache_policy)))
+        cursor.execute(query, (memcache_size, int(memcache_policy)))
         cnx.commit()
 
         for memcache_id in memcache_ip_list:
@@ -346,7 +359,8 @@ def resize_form():
 
     return App.render(
         render_template("resize_form.html", title="Change Memory Cache Resize Mode", curr_node_count=curr_node_count,
-                        new_node_count=new_node_count))
+                        new_node_count=new_node_count, max_expand_threshold=max_expand_threshold, min_shrink_threshold=min_shrink_threshold,
+                        ratio_expand_pool=ratio_expand_pool, ratio_shrink_pool=ratio_shrink_pool))
 
 
 @webapp_manager.route('/resize_mem_cache', methods=['POST'])
@@ -380,6 +394,16 @@ def resize_mem_cache():
         if ratio_expand <= 1 or ratio_shrink < 0 or ratio_shrink >= 1:
             return 'Invalid Ratios!'
 
+        global max_expand_threshold
+        global min_shrink_threshold
+        global ratio_expand_pool
+        global ratio_shrink_pool
+
+        max_expand_threshold = max_missrate
+        min_shrink_threshold = min_missrate
+        ratio_expand_pool = ratio_expand
+        ratio_shrink_pool = ratio_shrink
+
         data = {'autoscaler_mode': 1,
                 'max_missrate': max_missrate,
                 'min_missrate': min_missrate,
@@ -409,6 +433,7 @@ def resize_mem_cache():
             return "Failed to get repsonse from autoscaler/set_autoscaler_to_manual_mode"
 
         cnx = get_db()
+        global global_curr_node_count
 
         if new_node_count > curr_node_count:
             memcache_instance_list = {}
@@ -467,6 +492,7 @@ def resize_mem_cache():
                 #     pass
                 # else:
                 #     return "memcache updateinfo failed"
+            global_curr_node_count = new_node_count
 
             response = requests.post("http://127.0.0.1:5000/redistribute")
             res_json = response.json()
@@ -488,6 +514,9 @@ def resize_mem_cache():
                             WHERE MemcacheID = %s'''
                 cursor.execute(query, (memcache_id,))
                 cnx.commit()
+            
+            global_curr_node_count = new_node_count
+
             response = requests.post("http://127.0.0.1:5000/redistribute")
             res_json = response.json()
             if res_json['success'] == 'True':
@@ -537,6 +566,13 @@ def delet_all_data():
     return 'success'
 
 
-@webapp_manager.route('/delete_memcache_nodes', methods=['POST'])
-def delet_memcache_nodes():
-    return '1'
+@webapp_manager.route('/update_node_num', methods=['POST'])
+def update_node_num():
+    cnx = get_db()
+    cursor = cnx.cursor()
+    query = '''SELECT COUNT(*) FROM memcachelist '''
+    cursor.execute(query)
+    global global_curr_node_count
+    global_curr_node_count = cursor.fetchone()[0]
+    return jsonify(success='True')
+

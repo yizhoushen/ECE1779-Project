@@ -181,6 +181,14 @@ def operate_instances(delta_of_instances):
             pass
         else:
             return "memcache redistribution failed"
+
+        response = requests.post("http://127.0.0.1:5002/update_node_num")
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            pass
+        else:
+            return "update node number failed"
+        
         NEW_GET_REQUESTS = False
 
     elif delta_of_instances < 0:
@@ -209,6 +217,14 @@ def operate_instances(delta_of_instances):
             pass
         else:
             return "memcache redistribution failed"
+        
+        response = requests.post("http://127.0.0.1:5002/update_node_num")
+        res_json = response.json()
+        if res_json['success'] == 'True':
+            pass
+        else:
+            return "update node number failed"
+        
         NEW_GET_REQUESTS = False
 
     else:
@@ -262,7 +278,7 @@ class read_statistics_2CloudWatch():
                     cloudwatch_response = cloudwatch.get_metric_data(
                         MetricDataQueries=[
                             {
-                                'Id': str.lower(instanceID).replace(" ", ""),
+                                'Id': str.lower(instanceID).replace(" ", "").replace("-", "_"),
                                 'MetricStat': {
                                     'Metric': {
                                         'Namespace': 'statistical_variable_of_one_instance',
@@ -294,113 +310,8 @@ class read_statistics_2CloudWatch():
             if all_metric_data['single_GetPicRequestNum']['value'] != 0:
                 self.avg_MissRate = all_metric_data['single_miss_num']['value']/all_metric_data['single_GetPicRequestNum']['value']
             print("average miss rate: ", self.avg_MissRate)
-
-            
-# <<<<<<< Updated upstream
-#             cloudwatch_sum_miss_num = cloudwatch.get_metric_statistics(
-#                 Namespace='statistical_variable_of_one_instance',
-#                 MetricName='single_miss_num',
-#                 Dimensions=[
-#                     {
-#                         'Name': 'instance-id',
-#                         'Value': 'string'
-#                     },
-#                 ],
-#                 StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
-#                 EndTime=datetime.utcnow(),
-#                 Period=60,
-#                 Statistics=[
-#                     'Sum', 'SampleCount',
-#                 ],
-#
-#             )
-#             print(cloudwatch_sum_miss_num)
-#
-#             cloudwatch_sum_GetPicRequestNum = cloudwatch.get_metric_statistics(
-#                 Namespace='statistical_variable_of_one_instance',
-#                 MetricName='single_GetPicRequestNum',
-#                 Dimensions=[
-#                     {
-#                         'Name': 'instance-id',
-#                         'Value': 'string'
-#                     },
-#                 ],
-#                 StartTime=datetime.utcnow() - timedelta(seconds=1 * 60),
-#                 EndTime=datetime.utcnow(),
-#                 Period=60,
-#                 Statistics=[
-#                     'Sum', 'SampleCount',
-#                 ],
-#
-#             )
-#             print(cloudwatch_sum_GetPicRequestNum)
-#
-#             if len(cloudwatch_sum_miss_num['Datapoints']) == 0 or len(
-#                     cloudwatch_sum_GetPicRequestNum['Datapoints']) == 0:
-#                 self.MissNum = -2
-#             else:
-#                 self.MissNum = cloudwatch_sum_miss_num['Datapoints'][0]['Sum']
-#                 self.GetPicRequestNum = cloudwatch_sum_GetPicRequestNum['Datapoints'][0]['Sum']
-#                 if self.GetPicRequestNum == 0:
-#                     self.avg_MissRate = -1
-#                 else:
-#                     self.avg_MissRate = self.MissNum / self.GetPicRequestNum
-#                 print("average miss rate: " + str(self.avg_MissRate))
-#             print("Miss number: " + str(self.MissNum))
-# =======
-            # cloudwatch_sum_miss_num = cloudwatch.get_metric_statistics(
-            #     Namespace='statistical_variable_of_one_instance',
-            #     MetricName='single_miss_num',
-            #     Dimensions=[
-            #         {
-            #             'Name': 'instance-id',
-            #             'Value': 'string'
-            #         },
-            #     ],
-            #     StartTime=datetime.utcnow() - timedelta(seconds=1 * 5),
-            #     EndTime=datetime.utcnow(),
-            #     Period=5,
-            #     Statistics=[
-            #         'Sum', 'SampleCount',
-            #     ],
-            #
-            # )
-            # print(cloudwatch_sum_miss_num)
-            #
-            # cloudwatch_sum_GetPicRequestNum = cloudwatch.get_metric_statistics(
-            #     Namespace='statistical_variable_of_one_instance',
-            #     MetricName='single_GetPicRequestNum',
-            #     Dimensions=[
-            #         {
-            #             'Name': 'instance-id',
-            #             'Value': 'string'
-            #         },
-            #     ],
-            #     StartTime=datetime.utcnow() - timedelta(seconds=1 * 5),
-            #     EndTime=datetime.utcnow(),
-            #     Period=5,
-            #     Statistics=[
-            #         'Sum', 'SampleCount',
-            #     ],
-            #
-            # )
-            # print(cloudwatch_sum_GetPicRequestNum)
-            #
-            # if len(cloudwatch_sum_miss_num['Datapoints']) == 0 or len(
-            #         cloudwatch_sum_GetPicRequestNum['Datapoints']) == 0:
-            #     self.MissNum = -2
-            # else:
-            #     self.MissNum = cloudwatch_sum_miss_num['Datapoints'][0]['Sum']
-            #     self.GetPicRequestNum = cloudwatch_sum_GetPicRequestNum['Datapoints'][0]['Sum']
-            #     if self.GetPicRequestNum == 0:
-            #         self.avg_MissRate = -1
-            #     else:
-            #         self.avg_MissRate = self.MissNum / self.GetPicRequestNum
-            #     print("average miss rate: " + str(self.avg_MissRate))
-            # print("Miss number: " + str(self.MissNum))
-
-
             time.sleep(SECONDS_READING_2DB_INTERVAL)
+
 
 statistic_cloudwatch = read_statistics_2CloudWatch()
 threading.Thread(target=statistic_cloudwatch.read_statistics, daemon=True).start()

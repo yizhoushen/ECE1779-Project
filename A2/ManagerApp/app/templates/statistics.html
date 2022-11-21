@@ -15,17 +15,17 @@
         <th>Time</th>
     </thead> 
 
-        {% for row in aggregated_statistics %}
-            {% if row["Timestamps"] > start_time %}
+        {% for index in range (len_list) %}
+            {% if aggregated_statistics[index]["Timestamps"] > start_time %}
                 <tr>
-                    <td>{{node_num}}</td>
-                    <td>{{ row['single_ItemNum']['value']}}</td>
-                    <td>{{ row['single_currentMemCache']['value']}}</td>
-                    <td>{{ row['single_TotalRequestNum']['value']}}</td>
-                    <td>{{ row['avg_MissRate']}}</td>
-                    <td>{{ row['avg_HitRate']}}</td>
-                    <td>{{ row['single_GetPicRequestNum']['value']}}</td>
-                    <td>{{ row["Timestamps"]}}</td>
+                    <td>{{global_curr_node_list[index]}}</td>
+                    <td>{{ aggregated_statistics[index]['single_ItemNum']['value']}}</td>
+                    <td>{{ aggregated_statistics[index]['single_currentMemCache']['value']}}</td>
+                    <td>{{ aggregated_statistics[index]['single_TotalRequestNum']['value']}}</td>
+                    <td>{{ aggregated_statistics[index]['avg_MissRate']}}</td>
+                    <td>{{ aggregated_statistics[index]['avg_HitRate']}}</td>
+                    <td>{{ aggregated_statistics[index]['single_GetPicRequestNum']['value']}}</td>
+                    <td>{{ aggregated_statistics[index]["Timestamps"]}}</td>
                 </tr>
             {% endif %}
         {% endfor %}
