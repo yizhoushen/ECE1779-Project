@@ -1,6 +1,5 @@
 import threading
 
-import numpy as np
 from flask import render_template, url_for, request, g
 from app import webapp_manager
 from flask import json
@@ -439,15 +438,15 @@ def resize_mem_cache():
                 cnx.commit()
 
             # check if the initialization has finished
-            response = None
-            last_instance_id = new_node_count - 1
-            last_ip = memcache_instance_list[last_instance_id].public_ip_address
-            print("last ip is: {}".format(last_ip))
-            while response == None:
-                try:
-                    response = requests.post("http://{}:5001/refreshConfiguration".format(last_ip), timeout=5)
-                except:
-                    pass
+            # response = None
+            # last_instance_id = new_node_count - 1
+            # last_ip = memcache_instance_list[last_instance_id].public_ip_address
+            # print("last ip is: {}".format(last_ip))
+            # while response == None:
+            #     try:
+            #         response = requests.post("http://{}:5001/refreshConfiguration".format(last_ip), timeout=5)
+            #     except:
+            #         pass
 
             # update memcache info in each newly created instance
             for x in range(new_node_count - curr_node_count):

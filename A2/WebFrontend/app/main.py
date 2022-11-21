@@ -320,7 +320,7 @@ def redistribute():
                 else:
                     message = 'Failed to invalidate key in memcache from ip {}'.format(curr_public_ip)
                     return jsonify(success='False', message=message)
-            time.sleep(1)
+            # time.sleep(1)
     return jsonify(success='True')
 
 # @webapp.route('/api_test', methods=['POST', 'GET'])
