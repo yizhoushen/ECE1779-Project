@@ -1,0 +1,32 @@
+<!-- <link rel = "stylesheet" href = "../static/css/mainstyle.css">
+<div class = 'statistics'> -->
+{% extends "base.html" %}
+{% block content %}
+
+    <table> 
+    <thead> 
+        <th>id</th>
+        <th>ItemNum</th>
+        <th>Occupation</th>
+        <th>TotalRequests</th>
+        <th>MissRate</th>
+        <th>HitRate</th>
+        <th>GetPicRequests</th>
+        <th>Time</th>
+    </thead> 
+    {% for row in cursor %}
+        {% if row[7] > start_time %}
+            <tr>
+                <td>{{ row[0]}}</td>
+                <td>{{ row[1]}}</td>
+                <td>{{ row[2]}}</td>
+                <td>{{ row[3]}}</td>
+                <td>{{ row[4]}}</td>
+                <td>{{ row[5]}}</td>
+                <td>{{ row[6]}}</td>
+                <td>{{ row[7]}}</td>
+            </tr>
+        {% endif %}
+    {% endfor %}
+    </table>
+{% endblock %}

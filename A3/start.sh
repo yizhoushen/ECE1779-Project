@@ -1,0 +1,1 @@
+python ./WebFrontend/run.py & python ./MemCache/run.py

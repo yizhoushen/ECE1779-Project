@@ -1,0 +1,19 @@
+<!-- <link rel = "stylesheet" href = "../static/css/mainstyle.css">
+<div class = 'keylist'> -->
+{% extends "base.html" %}
+{% block content %}
+
+    <table> 
+    <thead> 
+           <th>ImageID</th>
+           <th>ImagePath</th>
+           
+    </thead> 
+    {% for row in cursor %}
+        <tr>
+            <td>{{ row[0]}}</td>
+            <td>{{ row[1]}}</td>
+        </tr>
+    {% endfor %}
+    </table>
+{% endblock %}
