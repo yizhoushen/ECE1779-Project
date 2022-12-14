@@ -5,7 +5,7 @@ from flask import json
 from datetime import datetime, timedelta
 
 import mysql.connector
-from app.config import db_config
+from app.config import db_config, ami_id, subnet_id, s3_bucket, aws_access_key, aws_secret_key
 import sys
 
 import tempfile
@@ -15,7 +15,11 @@ import time
 import requests
 import base64
 
+import boto3
+
 # os.chdir(os.path.abspath("./A1/WebFrontend"))
+
+images_tag = {}
 
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
@@ -81,15 +85,26 @@ def image_upload():
 
     cursor.execute(query_overwrite, (new_key, dbimage_path))
     cnx.commit()
-
     # Assume the current directory is .../ECE1779-Project
     temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), dbimage_path)
     save_path = temp_path.replace("\\", "/")
     new_image.save(save_path)
 
+    # Save file to S3
+    s3 = boto3.client('s3',
+                      region_name='us-east-1',
+                      aws_access_key_id=aws_access_key,
+                      aws_secret_access_key=aws_secret_key
+                      )
+    s3.upload_fileobj(new_image, s3_bucket['name'], dbimage_path)
+
     write_end = time.time()
     duration = (write_end - write_start) * 1000
     print("time used for writing: {}".format(duration))
+
+    with open(save_path, 'rb') as photo:
+        num_labels = detect_labels(photo.read())
+    print('The number of detected labels for {} is {}'.format(new_key, str(num_labels)))
 
     return render_template("execute_result.html", title="Upload image successfully")
 
@@ -139,11 +154,20 @@ def image_display():
 
         image_path = row[0]
 
-        temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), image_path)
-        read_path = temp_path.replace("\\", "/")
+        # temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), image_path)
+        # read_path = temp_path.replace("\\", "/")
+        #
+        # with open(read_path, "rb") as image_file:
+        #     encoded_string = base64.b64encode(image_file.read())
 
-        with open(read_path, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read())
+        s3 = boto3.client('s3',
+                          region_name='us-east-1',
+                          aws_access_key_id=aws_access_key,
+                          aws_secret_access_key=aws_secret_key
+                          )
+        image_file = s3.get_object(Bucket=s3_bucket['name'], Key=image_path)['Body'].read()
+        encoded_string = base64.b64encode(image_file).decode('utf-8')
+        print("Getting from S3: \n {}".format(encoded_string[:10]))
         
         data = {'key': image_key, 'value': encoded_string}
         response = requests.post("http://127.0.0.1:5001/put_kv", data=data, timeout=5)
@@ -249,3 +273,21 @@ def testpath():
 #     response = requests.post("http://127.0.0.1:5000/api/list_keys", timeout=5)
 #     print("Response from api/key_list: {}".format(response.text))
 #     return "okkkk"
+
+
+@webapp.route('/detect_labels', methods=['POST'])
+def detect_labels(photo):
+    global images_tag
+    aggregate_labels = []
+    client=boto3.client('rekognition')
+    response = client.detect_labels(Image={'Bytes': photo}, MaxLabels=15)
+
+    for label in response['Labels']:
+        if label['Confidence'] > 90:
+            aggregate_labels.append(label['Name'])
+    images_tag[photo] = aggregate_labels
+
+    return len(aggregate_labels)
+
+#todo
+#store labels into dynamodb
