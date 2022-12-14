@@ -93,13 +93,14 @@ class PicMemCache(object):
         print("put func: ", threading.current_thread().name)
         # 具体的图片写入memcache过程，不可首次调用
         if self.memCacheCapacity < getsizeof(picString):
-            # print("memCache容量过小，甚至小于本张图片大小，请增大memCache，本次缓存失败")
+            print("memCache容量过小，甚至小于本张图片大小，请增大memCache，本次缓存失败")
             return "Cache failure! MemCache capacity is too small, even smaller than the image size, please increase the memCache capacity."
         elif self.currentMemCache + getsizeof(picString) <= self.memCacheCapacity:
             # 加入新图片后，没有超过MemCache总容量
             self.MC[keyID] = picString
             self.currentMemCache += getsizeof(picString)
             self.ItemNum += 1
+            print("Caching success! Images go directly to cache.")
             return "Caching success! Images go directly to cache."
         else:
             # 加入新图片后，超过了MemCache总容量：需要丢掉图片，存入新图片
@@ -117,6 +118,7 @@ class PicMemCache(object):
             self.currentMemCache += getsizeof(picString)
             self.ItemNum += 1
             # print('Memcache set key {}'.format(keyID))
+            print("Caching success! Deleted the previous cached content.")
             return "Caching success! Deleted the previous cached content."
 
     def get_pic(self, keyID):

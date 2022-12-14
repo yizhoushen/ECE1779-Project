@@ -48,18 +48,18 @@ def upload_form():
 def image_upload():
     write_start = time.time()
     if 'uploaded_key' not in request.form:
-        return "Missing image key"
+        return render_template("execute_result.html", title="Missing image key")
     
     if 'uploaded_image' not in request.files:
-        return "Missing uploaded image"
+        return render_template("execute_result.html", title="Missing uploaded image")
     
     new_key = request.form.get('uploaded_key')
     new_image = request.files['uploaded_image']
 
     if new_key == '':
-        return 'Image key is empty'
+        return render_template("execute_result.html", title="Image key is empty")
     if new_image.filename == '':
-        return 'Missing file name'
+        return render_template("execute_result.html", title="Missing file name")
     
     # invilidate memcache
     data = {'key': new_key}
@@ -91,7 +91,7 @@ def image_upload():
     duration = (write_end - write_start) * 1000
     print("time used for writing: {}".format(duration))
 
-    return "Success"
+    return render_template("execute_result.html", title="Upload image successfully")
 
 
 @webapp.route('/display_form', methods=['GET'])
@@ -153,8 +153,11 @@ def image_display():
             duration = (read_end - read_start) * 1000
             print("time used for reading from local file: {}".format(duration))
             return render_template("image_display.html", title="Image Display", image_path=image_path)
+        elif res_json['success'] == 'False':
+            print("Cache failure! MemCache capacity is too small")
+            return render_template("image_display.html", title="Image Display", image_path=image_path)
         else:
-            return "Failed to get repsonse from memcache/put_kv"
+            return render_template("execute_result.html", title="Failed to get repsonse from memcache/put_kv")
 
 
 
@@ -208,20 +211,20 @@ def config_mem_cache():
         response = requests.post("http://127.0.0.1:5001/refreshConfiguration", timeout=5)
         res_json = response.json()
         if res_json['success'] == 'True':
-            return "Cache configuration is successful"
+            return render_template("execute_result.html", title="Cache configuration is successful")
         elif res_json['success'] == 'False':
-            return "Cache configuration failed!"
+            return render_template("execute_result.html", title="Cache configuration failed!")
         else:
-            return "Failed to get repsonse from memcache/clear"
+            return render_template("execute_result.html", title="Failed to get repsonse from memcache/clear")
 
         return "Success"
     elif 'cache_clear' in request.form and 'cache_configure' not in request.form:
         response = requests.post("http://127.0.0.1:5001/clear", timeout=5)
         res_json = response.json()
         if res_json['success'] == 'True':
-            return "Cache Cleared"
+            return render_template("execute_result.html", title="Cache Cleared")
         else:
-            return "Failed to get repsonse from memcache/clear"
+            return render_template("execute_result.html", title="Failed to get repsonse from memcache/clear")
     else:
         return "Invalid! Please choose cache configure or cache clear"
 
