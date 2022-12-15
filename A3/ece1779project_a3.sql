@@ -1,5 +1,5 @@
-
-use ece1779project;
+create database if not exists ece1779project_a3;
+use ece1779project_a3;
 
 show tables;
 
