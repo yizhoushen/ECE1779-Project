@@ -5,7 +5,7 @@ from flask import json
 from datetime import datetime, timedelta
 
 import mysql.connector
-from app.config import db_config, ami_id, subnet_id, s3_bucket, aws_access_key, aws_secret_key
+from app.config import db_config, s3_bucket, aws_access_key, aws_secret_key
 import sys
 
 import tempfile
@@ -59,6 +59,9 @@ def image_upload():
     
     new_key = request.form.get('uploaded_key')
     new_image = request.files['uploaded_image']
+    # new_image_bytes = new_image.read()
+    print("new_image: {}".format(new_image))
+    # print("new image_bytes: {}".format(new_image_bytes[:10]))
 
     if new_key == '':
         return render_template("execute_result.html", title="Image key is empty")
@@ -68,28 +71,28 @@ def image_upload():
     # invilidate memcache
     data = {'key': new_key}
     response = requests.post("http://127.0.0.1:5001/invalidateKey", data=data, timeout=5)
-    print(response.text)
-    
-    # path saved in database is ./static/images/<new_key>.<file_extension>
+    res_json = response.json()
+    if res_json['success'] == 'True':
+        pass
+    else:
+        return render_template("execute_result.html", title="Failed to invalidate key in memcache")
+      
+    # Save key and path to database
     s = new_image.filename.split(".")
     file_extension = s[len(s)-1]
-    temp_path = os.path.join("./static/images", "{}.{}".format(new_key, file_extension))
-    dbimage_path = temp_path.replace("\\", "/")
+    # temp_path = os.path.join("./static/images", "{}.{}".format(new_key, file_extension))
+    # dbimage_path = temp_path.replace("\\", "/")
+    dbimage_path = "{}.{}".format(new_key, file_extension)
 
     cnx = get_db()
     cursor = cnx.cursor()
-
     query_overwrite = '''   INSERT INTO imagelist(ImageID, ImagePath)
                             VALUES(%s, %s) as newimage
                             ON DUPLICATE KEY UPDATE ImagePath=newimage.ImagePath'''
 
     cursor.execute(query_overwrite, (new_key, dbimage_path))
     cnx.commit()
-    # Assume the current directory is .../ECE1779-Project
-    temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), dbimage_path)
-    save_path = temp_path.replace("\\", "/")
-    new_image.save(save_path)
-
+    
     # Save file to S3
     s3 = boto3.client('s3',
                       region_name='us-east-1',
@@ -98,13 +101,18 @@ def image_upload():
                       )
     s3.upload_fileobj(new_image, s3_bucket['name'], dbimage_path)
 
+    # Get image file from S3
+    new_image_bytes = s3.get_object(Bucket=s3_bucket['name'], Key=dbimage_path)['Body'].read()
+    print("new image: {}".format(new_image_bytes[:10]))
+
+    # label the uploaded image file
+    num_labels = detect_labels(new_key, new_image_bytes)
+    print('The number of detected labels for {} is {}'.format(new_key, str(num_labels)))
+    print(images_tag)
+
     write_end = time.time()
     duration = (write_end - write_start) * 1000
     print("time used for writing: {}".format(duration))
-
-    with open(save_path, 'rb') as photo:
-        num_labels = detect_labels(photo.read())
-    print('The number of detected labels for {} is {}'.format(new_key, str(num_labels)))
 
     return render_template("execute_result.html", title="Upload image successfully")
 
@@ -154,12 +162,6 @@ def image_display():
 
         image_path = row[0]
 
-        # temp_path = os.path.join(os.path.abspath("./WebFrontend/app"), image_path)
-        # read_path = temp_path.replace("\\", "/")
-        #
-        # with open(read_path, "rb") as image_file:
-        #     encoded_string = base64.b64encode(image_file.read())
-
         s3 = boto3.client('s3',
                           region_name='us-east-1',
                           aws_access_key_id=aws_access_key,
@@ -176,10 +178,10 @@ def image_display():
             read_end = time.time()
             duration = (read_end - read_start) * 1000
             print("time used for reading from local file: {}".format(duration))
-            return render_template("image_display.html", title="Image Display", image_path=image_path)
+            return render_template("image_display.html", title="Image Display", encoded_string=encoded_string, local_file=True)
         elif res_json['success'] == 'False':
             print("Cache failure! MemCache capacity is too small")
-            return render_template("image_display.html", title="Image Display", image_path=image_path)
+            return render_template("image_display.html", title="Image Display", encoded_string=encoded_string, local_file=True)
         else:
             return render_template("execute_result.html", title="Failed to get repsonse from memcache/put_kv")
 
@@ -275,17 +277,17 @@ def testpath():
 #     return "okkkk"
 
 
-@webapp.route('/detect_labels', methods=['POST'])
-def detect_labels(photo):
+# @webapp.route('/detect_labels', methods=['POST'])
+def detect_labels(key, photo):
     global images_tag
     aggregate_labels = []
     client=boto3.client('rekognition')
-    response = client.detect_labels(Image={'Bytes': photo}, MaxLabels=15)
+    response = client.detect_labels(Image={'Bytes': photo}, MaxLabels=10)
 
     for label in response['Labels']:
         if label['Confidence'] > 90:
             aggregate_labels.append(label['Name'])
-    images_tag[photo] = aggregate_labels
+    images_tag[key] = aggregate_labels
 
     return len(aggregate_labels)
 
