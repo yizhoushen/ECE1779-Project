@@ -20,6 +20,7 @@ import boto3
 # os.chdir(os.path.abspath("./A1/WebFrontend"))
 
 images_tag = {}
+username = 'username'
 
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
@@ -114,6 +115,8 @@ def image_upload():
     duration = (write_end - write_start) * 1000
     print("time used for writing: {}".format(duration))
 
+    # data = {'tableName': username, 'key': new_key, 'labels': images_tag[new_key]}
+    # response = requests.post("http://127.0.0.1:5001/putItem", data=data)
     return render_template("execute_result.html", title="Upload image successfully")
 
 
@@ -233,7 +236,7 @@ def config_mem_cache():
 
         cursor.execute(query, (memcache_szie, int(memcache_policy)))
         cnx.commit()
-        
+
         response = requests.post("http://127.0.0.1:5001/refreshConfiguration", timeout=5)
         res_json = response.json()
         if res_json['success'] == 'True':
@@ -291,5 +294,9 @@ def detect_labels(key, photo):
 
     return len(aggregate_labels)
 
-#todo
-#store labels into dynamodb
+# todo
+# user register and login
+def register():
+    global username
+    # Create the user's individual Table when the user registers
+    response = requests.post("http://127.0.0.1:5001/createTable", timeout=5)

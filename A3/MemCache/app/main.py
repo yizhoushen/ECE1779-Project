@@ -5,6 +5,7 @@ from sys import getsizeof
 import random
 from datetime import datetime, timedelta
 
+import boto3
 # database
 import mysql.connector
 from app.config import db_config
@@ -309,6 +310,41 @@ def refreshConfiguration():
 #     memory1.Front_end_upload(keyID=key)
 #     response = jsonify(success='True')
 #     return response
+
+@webapp_memcache.route('/createTable', methods=['POST'])
+def create_user_table():
+    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+    table = dynamodb.create_table(
+        TableName='username',
+        KeySchema=[
+            {
+                'AttributeName': 'image_key',
+                'KeyType': 'HASH'  # Partition key
+            },
+            {
+                'AttributeName': 'CreateTime',
+                'KeyType': 'RANGE'  # Sort key
+            }
+        ],
+        AttributeDefinitions=[
+            {
+                'AttributeName': 'image_key',
+                'AttributeType': 'S'
+            },
+            {
+                'AttributeName': 'CreateTime',
+                'AttributeType': 'S'
+            },
+        ],
+        ProvisionedThroughput={
+            'ReadCapacityUnits': 10,
+            'WriteCapacityUnits': 10
+        }
+    )
+    return 'Success'
+
+
+
 
 
 @webapp_memcache.route('/', methods=['GET'])
