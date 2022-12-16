@@ -345,6 +345,23 @@ def create_user_table():
 
 
 
+@webapp_memcache.route('/putItem', methods=['POST'])
+def putItem():
+    tableName = request.form.get('tableName')
+    key = request.form.get('key')
+    labels = request.form.getlist('labels')
+    CreateTime = str(datetime.now().strftime("%y-%m-%d"))
+    print('CreateTime:'+CreateTime)
+    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+    table = dynamodb.Table(tableName)
+    response = table.put_item(
+        Item={
+            'image_key': str(key),
+            'CreateTime': CreateTime,
+            'Labels': labels
+        }
+    )
+    return 'Success'
 
 
 @webapp_memcache.route('/', methods=['GET'])

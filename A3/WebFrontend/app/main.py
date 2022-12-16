@@ -115,8 +115,8 @@ def image_upload():
     duration = (write_end - write_start) * 1000
     print("time used for writing: {}".format(duration))
 
-    # data = {'tableName': username, 'key': new_key, 'labels': images_tag[new_key]}
-    # response = requests.post("http://127.0.0.1:5001/putItem", data=data)
+    data = {'tableName': username, 'key': new_key, 'labels': images_tag[new_key]}
+    response = requests.post("http://127.0.0.1:5001/putItem", data=data)
     return render_template("execute_result.html", title="Upload image successfully")
 
 
