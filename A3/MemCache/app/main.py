@@ -347,6 +347,7 @@ def create_user_table():
 
 @webapp_memcache.route('/putItem', methods=['POST'])
 def putItem():
+    # Need update!
     tableName = request.form.get('tableName')
     key = request.form.get('key')
     labels = request.form.getlist('labels')
