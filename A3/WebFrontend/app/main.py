@@ -1,5 +1,5 @@
-
-from flask import render_template, url_for, request, g
+import app
+from flask import render_template, redirect, url_for, request, g
 from app import webapp, memcache
 from flask import json
 from datetime import datetime, timedelta
@@ -40,17 +40,31 @@ def teardown_db(exception):
     if db is not None:
         db.close()
 
-@webapp.route('/',methods=['GET'])
+# @webapp.route('/',methods=['GET'])
 @webapp.route('/main',methods=['GET'])
 def main():
+    print("getting main page! userid: {}".format(app.userid))
+    if app.userid == None:
+        return "Access Denied! Please Login!"
+    else:
+        pass
     return render_template("main.html")
 
 @webapp.route('/upload_form', methods=['GET'])
 def upload_form():
+    if app.userid == None:
+        return "Access Denied! Please Login!"
+    else:
+        pass
     return render_template("upload_form.html", title="Upload Image")
 
 @webapp.route('/image_upload', methods=['POST'])
 def image_upload():
+    if app.userid == None:
+        return "Access Denied! Please Login!"
+    else:
+        pass
+    
     write_start = time.time()
     if 'uploaded_key' not in request.form:
         return render_template("execute_result.html", title="Missing image key")
@@ -122,10 +136,19 @@ def image_upload():
 
 @webapp.route('/display_form', methods=['GET'])
 def display_form():
+    if app.userid == None:
+        return "Access Denied! Please Login!"
+    else:
+        pass
     return render_template("display_form.html", title="Select Image Key")
 
 @webapp.route('/image_display', methods=['POST'])
 def image_display():
+    if app.userid == None:
+        return "Access Denied! Please Login!"
+    else:
+        pass
+    
     read_start = time.time()
     if 'image_key' not in request.form:
         return "Need a image key"
@@ -192,23 +215,32 @@ def image_display():
 
 @webapp.route('/all_keys', methods=['GET'])
 def all_keys():
+    if app.userid == None:
+        return "Access Denied! Please Login!"
+    else:
+        pass
     cnx = get_db()
-
     cursor = cnx.cursor()
-
     query = "SELECT * FROM imagelist"
-
     cursor.execute(query)
-
     return render_template("keylist.html", title="ImageID List", cursor=cursor)
 
 
 @webapp.route('/config_form', methods=['GET'])
 def config_form():
+    if app.userid == None:
+        return "Access Denied! Please Login!"
+    else:
+        pass
     return render_template("config_form.html", title="Configure Memory Cache")
 
 @webapp.route('/config_mem_cache', methods=['POST'])
 def config_mem_cache():
+    if app.userid == None:
+        return "Access Denied! Please Login!"
+    else:
+        pass
+    
     if 'cache_clear' not in request.form and 'cache_configure' in request.form:
         if 'memcache_size' not in request.form:
             return "Missing MemCache size"
@@ -260,6 +292,10 @@ def config_mem_cache():
 
 @webapp.route('/statistics', methods=['GET'])
 def statistics():
+    if app.userid == None:
+        return "Access Denied! Please Login!"
+    else:
+        pass
     cnx = get_db()
     cursor = cnx.cursor()
     query = "SELECT * FROM statistics"
@@ -268,10 +304,10 @@ def statistics():
     start_time = datetime.now() - timedelta(minutes=10)
     return render_template("statistics.html", title="Memory Cache Statistics", cursor=cursor, start_time=start_time)
 
-@webapp.route('/testpath', methods=['GET'])
-def testpath():
-    temp_path = os.path.abspath("./temp_path")
-    return temp_path
+# @webapp.route('/testpath', methods=['GET'])
+# def testpath():
+#     temp_path = os.path.abspath("./temp_path")
+#     return temp_path
 
 # @webapp.route('/api_test', methods=['POST', 'GET'])
 # def test_api():
