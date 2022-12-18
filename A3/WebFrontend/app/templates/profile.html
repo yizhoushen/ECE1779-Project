@@ -5,13 +5,13 @@
 
     <!-- <h1>Profile</h1> -->
     <div class="card">
-        <img src="img.jpg" alt="profile_img" style="width:100%">
-        <p>{{nickname}}</p>
+        <p>User ID: {{userid}}</p>
+        <p>User Name: {{nickname}}</p>
         <form action="{{url_for('get_wordcloud')}}"  enctype="multipart/form-data" method="post">
 
             Show word cloud:
     
-            <input type="submit" value="Send">
+            <input type="submit" value="Show">
         </form>
       </div>
 

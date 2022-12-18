@@ -1,12 +1,12 @@
 # config of memcache db
-db_config = {'user': 'dbadmin',
-             'password': 'admin1234',
-             'host': '127.0.0.1',
-             'database': 'ece1779project'}
+# db_config = {'user': 'dbadmin',
+#              'password': 'admin1234',
+#              'host': '127.0.0.1',
+#              'database': 'ece1779project_a3'}
 
 # config of aws ec2
 
-# db_config = {'user': 'root',
-#              'password': 'ece1779pass',
-#              'host': '127.0.0.1',
-#              'database': 'ece1779aws'}
+db_config = {'user': 'root',
+             'password': 'ece1779pass',
+             'host': '127.0.0.1',
+             'database': 'ece1779project_a3'}
