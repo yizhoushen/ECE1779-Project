@@ -1,4 +1,5 @@
 import app
+from boto3.dynamodb.conditions import Key
 from flask import render_template, redirect, url_for, request, g
 from app import webapp, memcache
 from flask import json
@@ -24,6 +25,8 @@ import pandas as pd
 # os.chdir(os.path.abspath("./A1/WebFrontend"))
 
 images_tag = {}
+
+
 # username = 'username'
 
 def connect_to_database():
@@ -32,11 +35,13 @@ def connect_to_database():
                                    host=db_config['host'],
                                    database=db_config['database'])
 
+
 def get_db():
     db = getattr(g, '_database', None)
     if db is None:
         db = g._database = connect_to_database()
     return db
+
 
 def query_user_tag():
     dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
@@ -54,6 +59,7 @@ def query_user_tag():
     records = list(set(records))
     return records
 
+
 def get_wordcloud_pic():
     comment_words = ''
     stopwords = set(STOPWORDS)
@@ -65,16 +71,16 @@ def get_wordcloud_pic():
 
     print("comment_words: {}".format(comment_words))
 
-    wordcloud = WordCloud(width = 800, height = 800,
-				background_color ='white',
-				stopwords = stopwords,
-				min_font_size = 10).generate(comment_words)
+    wordcloud = WordCloud(width=800, height=800,
+                          background_color='white',
+                          stopwords=stopwords,
+                          min_font_size=10).generate(comment_words)
 
     # plot the WordCloud image					
-    plt.figure(figsize = (8, 8), facecolor = None)
+    plt.figure(figsize=(8, 8), facecolor=None)
     plt.imshow(wordcloud)
     plt.axis("off")
-    plt.tight_layout(pad = 0)
+    plt.tight_layout(pad=0)
 
     # plt.show()
     wc_save_path = os.path.join("./WebFrontend/app/static/images", "wcgraph.png")
@@ -82,14 +88,16 @@ def get_wordcloud_pic():
 
     plt.savefig(wc_save_path)
 
+
 @webapp.teardown_appcontext
 def teardown_db(exception):
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()
 
+
 # @webapp.route('/',methods=['GET'])
-@webapp.route('/main',methods=['GET'])
+@webapp.route('/main', methods=['GET'])
 def main():
     print("getting main page! userid: {}".format(app.userid))
     if app.userid == None:
@@ -140,6 +148,7 @@ def statistics():
     start_time = datetime.now() - timedelta(minutes=10)
     return render_template("statistics.html", title="Memory Cache Statistics", cursor=cursor, start_time=start_time)
 
+
 @webapp.route('/profile', methods=['GET'])
 def profile():
     if app.userid == None:
@@ -149,18 +158,20 @@ def profile():
     nickname = app.username
     return render_template("profile.html", title="Profile", nickname=nickname)
 
+
 @webapp.route('/wordcloud', methods=['GET', 'POST'])
 def get_wordcloud():
     if app.userid == None:
         return "Access Denied! Please Login!"
     else:
         pass
-    
+
     get_wordcloud_pic()
     # return "success"
     image_path = os.path.join("./static/images", "wcgraph.png")
     print("image_path: {}".format(image_path))
     return render_template("wordcloud.html", image_path=image_path)
+
 
 # @webapp.route('/api_test', methods=['POST', 'GET'])
 # def test_api():
@@ -168,4 +179,45 @@ def get_wordcloud():
 #     print("Response from api/key_list: {}".format(response.text))
 #     return "okkkk"
 
+def tag_count():
+    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+    table = dynamodb.Table('Tags')
+    records = []
+    last_evaluated_key = None  # 最新主键
+    while True:
+        if last_evaluated_key is None:
+            response = table.scan(
+                ProjectionExpression='tag',
+            )
+        else:
+            response = table.scan(
+                ProjectionExpression='tag',
+                ExclusiveStartKey=last_evaluated_key  # 通过主键获取扫描初始位置
+            )
+        for i in response['Items']:
+            records.append(i['tag'])
+        count = response['Count']
+        if 'LastEvaluatedKey' in response:
+            last_evaluated_key = response['LastEvaluatedKey']
+        else:
+            break
+    record_dict = {}
+    for key in records:
+        record_dict[key] = record_dict.get(key, 0) + 1
+    record_dict_sorted = sorted(record_dict.items(), key=lambda x: x[1], reverse=True)
+    record_dict_sorted = record_dict_sorted[:5]
+    top_labels = []
+    top_count = []
+    for i in record_dict_sorted:
+        top_labels.append(i[0])
+        top_count.append(i[1])
+    top_rate = [str(round(x/count*100)) for x in top_count]
+    data = {"top_labels":top_labels, "top_rate":top_rate}
+    return data
 
+
+@webapp.route('/recommend', methods=['GET','POST'])
+def recommend():
+    data = tag_count()
+    list_len = len(data['top_labels'])
+    return render_template("recommend.html", title="Recommendations", top_labels=data['top_labels'], top_rate=data['top_rate'], list_len = list_len )

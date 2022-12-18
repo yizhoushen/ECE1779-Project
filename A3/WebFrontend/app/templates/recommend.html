@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+
+<p>Here are the pictures that may interest you</p>
+
+    {% for index in range(list_len) %}
+<div class="banner1">
+        <a href="display_tag_images/{{row}}"> {{top_labels[index]}} </a>
+        <span>{{top_rate[index]}} percent of people have uploaded images with this tag</span>
+
+        <br>
+    </div>
+<br><br><br>
+    {% endfor %}
+
+
+{% endblock %}
