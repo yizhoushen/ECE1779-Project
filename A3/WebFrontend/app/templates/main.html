@@ -5,7 +5,7 @@
 </head>
 <html>
     <body>
-        <h1>Home</h1>
+        <h1>Hello {{nickname}}!</h1>
         <div class = "container">
         <ul>
             <li class="item"><a href="{{url_for('upload_form')}}">upload image</a></li>
@@ -13,6 +13,8 @@
             <li class="item"><a href="{{url_for('all_keys')}}">show all keys</a></li>
             <li class="item"><a href="{{url_for('config_form')}}">configure mem-cache</a></li>
             <li class="item"><a href="{{url_for('statistics')}}">mem-cache statistics</a></li>
+            <li class="item"><a href="{{url_for('profile')}}">profile</a></li>
+            <li class="item"><a href="{{url_for('logout')}}">LOGOUT</a></li>
         </ul>
         </div>
         

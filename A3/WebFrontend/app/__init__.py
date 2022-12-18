@@ -2,10 +2,12 @@ from flask import Flask
 
 global memcache
 global userid
+global username
 
 webapp = Flask(__name__)
 memcache = {}
 userid = None
+username = None
 
 from app import main
 from app import api

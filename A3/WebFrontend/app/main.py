@@ -18,7 +18,7 @@ import boto3
 # os.chdir(os.path.abspath("./A1/WebFrontend"))
 
 images_tag = {}
-username = 'username'
+# username = 'username'
 
 def connect_to_database():
     return mysql.connector.connect(user=db_config['user'],
@@ -46,7 +46,8 @@ def main():
         return "Access Denied! Please Login!"
     else:
         pass
-    return render_template("main.html")
+    nickname = app.username
+    return render_template("main.html", nickname=nickname)
 
 
 @webapp.route('/all_keys', methods=['GET'])
@@ -76,6 +77,14 @@ def statistics():
     start_time = datetime.now() - timedelta(minutes=10)
     return render_template("statistics.html", title="Memory Cache Statistics", cursor=cursor, start_time=start_time)
 
+@webapp.route('/profile', methods=['GET'])
+def profile():
+    if app.userid == None:
+        return "Access Denied! Please Login!"
+    else:
+        pass
+    nickname = app.username
+    return render_template("profile.html", title="Profile", nickname=nickname)
 
 # @webapp.route('/api_test', methods=['POST', 'GET'])
 # def test_api():
