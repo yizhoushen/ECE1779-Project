@@ -17,7 +17,7 @@ from flask import json
 from flask import render_template
 
 SECONDS_WRITING_2DB_INTERVAL = 30
-
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 
 # database prepare & connect
 def connect_to_database():
@@ -220,7 +220,7 @@ class PicMemCache(object):
 
 # following for test
 memory1 = PicMemCache()
-threading.Thread(target=memory1.write_statistics_2db, daemon=True).start()
+# threading.Thread(target=memory1.write_statistics_2db, daemon=True).start()
 
 
 # for i in range(60):
@@ -311,25 +311,6 @@ def refreshConfiguration():
 #     response = jsonify(success='True')
 #     return response
 
-
-@webapp_memcache.route('/putItem', methods=['POST'])
-def putItem():
-    # Need update!
-    tableName = request.form.get('tableName')
-    key = request.form.get('key')
-    labels = request.form.getlist('labels')
-    CreateTime = str(datetime.now().strftime("%y-%m-%d"))
-    print('CreateTime:'+CreateTime)
-    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-    table = dynamodb.Table(tableName)
-    response = table.put_item(
-        Item={
-            'image_key': str(key),
-            'CreateTime': CreateTime,
-            'Labels': labels
-        }
-    )
-    return 'Success'
 
 
 @webapp_memcache.route('/', methods=['GET'])

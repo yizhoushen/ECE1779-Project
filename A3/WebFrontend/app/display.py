@@ -85,7 +85,8 @@ def image_display():
             return "No such image"
 
         image_path = row[0]
-
+        image_path = get_single_image_s3loc(image_key)
+        print(image_path)
         s3 = boto3.client('s3',
                           region_name='us-east-1',
                           aws_access_key_id=aws_access_key,
@@ -108,3 +109,18 @@ def image_display():
             return render_template("image_display.html", title="Image Display", encoded_string=encoded_string, local_file=True)
         else:
             return render_template("execute_result.html", title="Failed to get repsonse from memcache/put_kv")
+
+
+def get_single_image_s3loc(key):
+    table = dynamodb.Table('Images')
+    response = table.get_item(
+        Key={
+            'user_id': app.userid,
+            'image_key': key
+        },
+    )
+
+    if 'Item' in response:
+        pic_loc = response['Item']['pic_s3_loc']
+    return pic_loc
+

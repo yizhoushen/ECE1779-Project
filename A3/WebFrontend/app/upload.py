@@ -10,9 +10,9 @@ from boto3.dynamodb.conditions import Key
 
 
 images_tag = {}
-username = 'username'
+public = True
 
-dynamodb = boto3.resource('dynamodb', 
+dynamodb = boto3.resource('dynamodb',
                           region_name='us-east-1',
                           aws_access_key_id=aws_access_key,
                           aws_secret_access_key=aws_secret_key)
@@ -40,7 +40,7 @@ def detect_labels(key, photo):
             aggregate_labels.append(label['Name'])
     images_tag[key] = aggregate_labels
 
-    return len(aggregate_labels)
+    return aggregate_labels
 
 @webapp.teardown_appcontext
 def teardown_db(exception):
@@ -62,14 +62,14 @@ def image_upload():
         return "Access Denied! Please Login!"
     else:
         pass
-    
+
     write_start = time.time()
     if 'uploaded_key' not in request.form:
         return render_template("execute_result.html", title="Missing image key")
-    
+
     if 'uploaded_image' not in request.files:
         return render_template("execute_result.html", title="Missing uploaded image")
-    
+
     new_key = request.form.get('uploaded_key')
     new_image = request.files['uploaded_image']
     # new_image_bytes = new_image.read()
@@ -80,7 +80,7 @@ def image_upload():
         return render_template("execute_result.html", title="Image key is empty")
     if new_image.filename == '':
         return render_template("execute_result.html", title="Missing file name")
-    
+
     # invilidate memcache
     data = {'key': new_key}
     response = requests.post("http://127.0.0.1:5001/invalidateKey", data=data, timeout=5)
@@ -89,13 +89,14 @@ def image_upload():
         pass
     else:
         return render_template("execute_result.html", title="Failed to invalidate key in memcache")
-      
+
     # Save key and path to database
     s = new_image.filename.split(".")
     file_extension = s[len(s)-1]
     # temp_path = os.path.join("./static/images", "{}.{}".format(new_key, file_extension))
     # dbimage_path = temp_path.replace("\\", "/")
-    dbimage_path = "{}.{}".format(new_key, file_extension)
+    user = app.userid.replace("@", "_").replace(".", "_")
+    dbimage_path = "{}_{}.{}".format(user, new_key, file_extension)
 
     cnx = get_db()
     cursor = cnx.cursor()
@@ -105,7 +106,7 @@ def image_upload():
 
     cursor.execute(query_overwrite, (new_key, dbimage_path))
     cnx.commit()
-    
+
     # Save file to S3
     s3 = boto3.client('s3',
                       region_name='us-east-1',
@@ -119,14 +120,92 @@ def image_upload():
     print("new image: {}".format(new_image_bytes[:10]))
 
     # label the uploaded image file
-    num_labels = detect_labels(new_key, new_image_bytes)
-    print('The number of detected labels for {} is {}'.format(new_key, str(num_labels)))
+    img_labels = detect_labels(new_key, new_image_bytes)
+    print('The number of detected labels for {} is {}'.format(new_key, str(len(img_labels))))
     print(images_tag)
 
     write_end = time.time()
     duration = (write_end - write_start) * 1000
     print("time used for writing: {}".format(duration))
 
-    # data = {'tableName': username, 'key': new_key, 'labels': images_tag[new_key]}
-    # response = requests.post("http://127.0.0.1:5001/putItem", data=data)
+    #put image info into Table2(Images)
+    response = put_image_Item(new_key, img_labels, dbimage_path, public, location=None)
+    print(response)
+
+    # put tag info into Table3(Tags)
+    user_img_pair = app.userid + "_" + new_key
+    for tag in img_labels:
+        re = put_tag_Item(tag, user_img_pair, public, dbimage_path)
+
+
+    # update the column "public_or_not" if it changed
+    if public == False:
+        img_labels = get_image_labels(new_key)
+        response = tag_update(img_labels, user_img_pair, public)
+
     return render_template("execute_result.html", title="Upload image successfully")
+
+
+def put_image_Item(key, labels, s3_loc, public, location):
+    table = dynamodb.Table('Images')
+    response = table.put_item(
+        Item={
+            'user_id': app.userid,
+            'image_key': key,
+            'labels': labels,
+            'pic_s3_loc': s3_loc,
+            'public_or_not': public,
+            'location': location
+        }
+    )
+    return 'image item upload to dynamodb successfully'
+
+def get_image_labels(key):
+    data = {}
+    table = dynamodb.Table('Tags')
+    response = table.get_item(
+        Key={
+            'user_id': app.userid,
+            'image_key': key,
+        },
+        # ProjectionExpression="tag",
+    )
+
+    if 'Item' in response:
+        item = response['Item']
+        data.update(item)
+
+    return data['labels']
+
+
+def tag_update(labels, user_img_pair, public):
+    table = dynamodb.Table('Tags')
+    for tag in labels:
+        response = table.update_item(
+           Key={
+                'tag': tag,
+                'user_img': user_img_pair,
+            },
+            UpdateExpression = "SET #p = :p",
+            ExpressionAttributeValues = {
+                ':p': public
+            },
+            ExpressionAttributeNames = {"#p": "public_or_not"}
+
+        )
+    return 'success'
+
+
+def put_tag_Item(tag, user_img_pair, public, s3_loc):
+    table = dynamodb.Table('Tags')
+
+    response = table.put_item(
+        Item={
+            'tag': tag,
+            'user_img': user_img_pair,
+            'public_or_not': public,
+            'pic_s3_loc': s3_loc
+        }
+    )
+    return 'success'
+
