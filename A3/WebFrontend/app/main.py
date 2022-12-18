@@ -106,11 +106,24 @@ def all_keys():
         return "Access Denied! Please Login!"
     else:
         pass
-    cnx = get_db()
-    cursor = cnx.cursor()
-    query = "SELECT * FROM imagelist"
-    cursor.execute(query)
-    return render_template("keylist.html", title="ImageID List", cursor=cursor)
+    # cnx = get_db()
+    # cursor = cnx.cursor()
+    # query = "SELECT * FROM imagelist"
+    # cursor.execute(query)
+    # return render_template("keylist.html", title="ImageID List", cursor=cursor)
+    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+    table = dynamodb.Table('Images')
+
+    response = table.query(
+        KeyConditionExpression=Key('user_id').eq(app.userid),
+        ProjectionExpression="user_id, image_key, pic_s3_loc"
+    )
+    print("response table query: {}".format(response))
+    imagelist = []
+    for i in response['Items']:
+        imagelist.append([i['image_key'], i['pic_s3_loc']])
+    print("imagelist: {}".format(imagelist))
+    return render_template("keylist.html", title="ImageID List", imagelist=imagelist)
 
 
 @webapp.route('/statistics', methods=['GET'])
