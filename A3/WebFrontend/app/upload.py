@@ -9,7 +9,7 @@ import boto3
 from boto3.dynamodb.conditions import Key
 
 
-images_tag = {}
+# images_tag = {}
 public = True
 
 dynamodb = boto3.resource('dynamodb',
@@ -30,7 +30,7 @@ def get_db():
     return db
 
 def detect_labels(key, photo):
-    global images_tag
+    # global images_tag
     aggregate_labels = []
     client=boto3.client('rekognition')
     response = client.detect_labels(Image={'Bytes': photo}, MaxLabels=10)
@@ -38,7 +38,7 @@ def detect_labels(key, photo):
     for label in response['Labels']:
         if label['Confidence'] > 90:
             aggregate_labels.append(label['Name'])
-    images_tag[key] = aggregate_labels
+    # images_tag[key] = aggregate_labels
 
     return aggregate_labels
 
@@ -63,6 +63,8 @@ def image_upload():
     else:
         pass
 
+    global public
+    
     write_start = time.time()
     if 'uploaded_key' not in request.form:
         return render_template("execute_result.html", title="Missing image key")
@@ -80,6 +82,11 @@ def image_upload():
         return render_template("execute_result.html", title="Image key is empty")
     if new_image.filename == '':
         return render_template("execute_result.html", title="Missing file name")
+
+    if request.form.get('public_check'):
+        public = True
+    else:
+        public = False
 
     # invilidate memcache
     data = {'key': new_key}
@@ -122,7 +129,8 @@ def image_upload():
     # label the uploaded image file
     img_labels = detect_labels(new_key, new_image_bytes)
     print('The number of detected labels for {} is {}'.format(new_key, str(len(img_labels))))
-    print(images_tag)
+    print("image labels: {}".format(img_labels))
+    # print(images_tag)
 
     write_end = time.time()
     duration = (write_end - write_start) * 1000
@@ -139,9 +147,9 @@ def image_upload():
 
 
     # update the column "public_or_not" if it changed
-    if public == False:
-        img_labels = get_image_labels(new_key)
-        response = tag_update(img_labels, user_img_pair, public)
+    # if public == False:
+    #     img_labels = get_image_labels(new_key)
+    #     response = tag_update(img_labels, user_img_pair, public)
 
     return render_template("execute_result.html", title="Upload image successfully")
 
