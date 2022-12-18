@@ -33,14 +33,20 @@ def detect_labels(key, photo):
     # global images_tag
     aggregate_labels = []
     client=boto3.client('rekognition')
-    response = client.detect_labels(Image={'Bytes': photo}, MaxLabels=10)
-
+    response = client.detect_labels(Image={'Bytes': photo}, MaxLabels=5)
     for label in response['Labels']:
         if label['Confidence'] > 90:
             aggregate_labels.append(label['Name'])
     # images_tag[key] = aggregate_labels
-
     return aggregate_labels
+
+def moderate_image(photo):
+    inappropriate_tag = []
+    client = boto3.client('rekognition')
+    response = client.detect_moderation_labels(Image={'Bytes': photo})
+    for label in response['ModerationLabels']:
+        inappropriate_tag.append(label['Name'])
+    return inappropriate_tag
 
 @webapp.teardown_appcontext
 def teardown_db(exception):
@@ -125,6 +131,14 @@ def image_upload():
     # Get image file from S3
     new_image_bytes = s3.get_object(Bucket=s3_bucket['name'], Key=dbimage_path)['Body'].read()
     print("new image: {}".format(new_image_bytes[:10]))
+
+    moderate_labels = moderate_image(new_image_bytes)
+    print("moderate labels: {}".format(moderate_labels))
+    if len(moderate_labels) != 0:
+        print("Detected Inappropriate Images!!!")
+        s3_resource = boto3.resource('s3')
+        s3_resource.Object(s3_bucket['name'], dbimage_path).delete()
+        return render_template("execute_result.html", title="Cannot upload inappropriate images!")
 
     # label the uploaded image file
     img_labels = detect_labels(new_key, new_image_bytes)
