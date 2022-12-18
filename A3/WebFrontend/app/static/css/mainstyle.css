@@ -223,3 +223,21 @@ left: 10px;
     -webkit-transition:all 1s;
     -webkit-transform:translateX(80px);
 }
+
+/* 
+* {
+    box-sizing: border-box;
+  } */
+  
+.column {
+    float: left;
+    width: 33.33%;
+    padding: 5px;
+}
+  
+  /* Clearfix (clear floats) */
+.row::after {
+    content: "";
+    clear: both;
+    display: table;
+}

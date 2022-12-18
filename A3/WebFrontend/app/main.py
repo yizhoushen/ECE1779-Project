@@ -6,7 +6,7 @@ from flask import json
 from datetime import datetime, timedelta
 
 import mysql.connector
-from app.config import db_config, s3_bucket, aws_access_key, aws_secret_key
+from app.config import db_config, s3_bucket, s3_bucket_resized, aws_access_key, aws_secret_key
 import sys
 
 import time
@@ -156,7 +156,7 @@ def profile():
     else:
         pass
     nickname = app.username
-    return render_template("profile.html", title="Profile", nickname=nickname)
+    return render_template("profile.html", title="Profile", nickname=nickname, userid=app.userid)
 
 
 @webapp.route('/wordcloud', methods=['GET', 'POST'])
@@ -188,6 +188,11 @@ def tag_count():
         if last_evaluated_key is None:
             response = table.scan(
                 ProjectionExpression='tag',
+                FilterExpression="#p = :p",
+                ExpressionAttributeNames={"#p": "public_or_not"},
+                ExpressionAttributeValues={
+                    ':p': True,
+                },
             )
         else:
             response = table.scan(
@@ -213,11 +218,59 @@ def tag_count():
         top_count.append(i[1])
     top_rate = [str(round(x/count*100)) for x in top_count]
     data = {"top_labels":top_labels, "top_rate":top_rate}
+    print("data: {}".format(data))
     return data
+
+def query_public_tag(tag):
+    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+    table = dynamodb.Table('Tags')
+
+    response = table.query(
+        KeyConditionExpression=Key('tag').eq(tag),
+        FilterExpression="#p = :p",
+        ExpressionAttributeNames={"#p": "public_or_not"},
+        ExpressionAttributeValues={
+            ':p': True,
+        },
+    )
+
+    records = []
+    for i in response['Items']:
+        if app.userid not in i['user_img']:
+            records.append(i['pic_s3_loc'])
+    print("records: {}".format(records))
+    return records
 
 
 @webapp.route('/recommend', methods=['GET','POST'])
 def recommend():
+    if app.userid == None:
+        return "Access Denied! Please Login!"
+    else:
+        pass
+
     data = tag_count()
     list_len = len(data['top_labels'])
     return render_template("recommend.html", title="Recommendations", top_labels=data['top_labels'], top_rate=data['top_rate'], list_len = list_len )
+
+@webapp.route('/display_tag_images/<tag>', methods=['POST', 'GET'])
+def display_tag_images(tag):
+    if app.userid == None:
+        return "Access Denied! Please Login!"
+    else:
+        pass
+
+    s3 = boto3.client('s3', region_name='us-east-1')
+    records = query_public_tag(tag)
+    image_string_list = []
+    for image_path in records:
+        image_file = s3.get_object(Bucket=s3_bucket_resized['name'], Key=image_path)['Body'].read()
+        encoded_string = base64.b64encode(image_file).decode('utf-8')
+        image_string_list.append(encoded_string)
+    image_string_list_len = len(image_string_list)
+    return render_template("display_recommend.html", image_string_list=image_string_list, image_string_list_len=image_string_list_len)
+
+    # imgae_loc_list = []
+    # for image_path in imgae_loc_list:
+    #     if 
+    return "success"

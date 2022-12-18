@@ -1,0 +1,15 @@
+<!-- <link rel = "stylesheet" href = "../static/css/mainstyle.css">
+<div class ='image_display'> -->
+    {% extends "base.html" %}
+    {% block content %}
+    
+    <div class="row">
+    {% for index in range(image_string_list_len) %}
+    <div class="column">
+        <img src='data:;base64,{{image_string_list[index]}}' style="width:100%">
+    </div>
+    {% endfor %}
+    </div>
+    
+    
+    {% endblock %}

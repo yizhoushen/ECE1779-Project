@@ -135,6 +135,7 @@ def image_upload():
     moderate_labels = moderate_image(new_image_bytes)
     print("moderate labels: {}".format(moderate_labels))
     if len(moderate_labels) != 0:
+        response = requests.post("https://9tupmy47ca.execute-api.us-east-1.amazonaws.com/NSFW_Reminder/Lambda_NSFW_Reminder", timeout=5)
         print("Detected Inappropriate Images!!!")
         s3_resource = boto3.resource('s3')
         s3_resource.Object(s3_bucket['name'], dbimage_path).delete()
