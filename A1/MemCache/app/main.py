@@ -101,7 +101,6 @@ class PicMemCache(object):
             return "Caching success! Images go directly to cache."
         else:
             # After adding new images, the total MemCache capacity is exceeded: you need to discard the images and deposit new ones
-
             cnx = get_db()
             cursor = cnx.cursor()
             sql_load_replace_policy = "SELECT ReplacePolicy FROM configuration WHERE id = 1"
