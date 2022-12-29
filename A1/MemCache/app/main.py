@@ -248,7 +248,7 @@ def put_kv():
 
 @webapp_memcache.route('/get', methods=['POST'])
 def get():
-    #If the image is in memcache, return "Ture+image cache"; if not, return "false+empty"
+
     key = request.form.get('key')
     # Fig 1.(1) GET
     pic_value = memory1.get_pic(keyID=key)
