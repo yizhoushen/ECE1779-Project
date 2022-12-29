@@ -72,7 +72,6 @@ class PicMemCache(object):
             self.currentMemCache -= getsizeof(self.MC[keyID])
             self.MC.pop(keyID)
             self.ItemNum -= 1
-        # 返回成功与否
 
     def drop_pic(self, approach=0):
         # The default method is Random Replacement
@@ -91,18 +90,17 @@ class PicMemCache(object):
     def put_pic(self, keyID, picString):
         self.TotalRequestNum += 1
         print("put func: ", threading.current_thread().name)
-        # 具体的图片写入memcache过程，不可首次调用
+        # This is the process by which the specific image is written to the memcache and cannot be called directly
         if self.memCacheCapacity < getsizeof(picString):
-            # print("memCache容量过小，甚至小于本张图片大小，请增大memCache，本次缓存失败")
             return "Cache failure! MemCache capacity is too small, even smaller than the image size, please increase the memCache capacity."
         elif self.currentMemCache + getsizeof(picString) <= self.memCacheCapacity:
-            # 加入新图片后，没有超过MemCache总容量
+            # After adding new images, the total MemCache capacity is not exceeded
             self.MC[keyID] = picString
             self.currentMemCache += getsizeof(picString)
             self.ItemNum += 1
             return "Caching success! Images go directly to cache."
         else:
-            # 加入新图片后，超过了MemCache总容量：需要丢掉图片，存入新图片
+            # After adding new images, the total MemCache capacity is exceeded: you need to discard the images and deposit new ones
 
             cnx = get_db()
             cursor = cnx.cursor()
@@ -120,29 +118,29 @@ class PicMemCache(object):
             return "Caching success! Deleted the previous cached content."
 
     def get_pic(self, keyID):
-        # 功能：1.需要看图时，加速；2.判断一张图片是否在memcache中
-        # 唯一的，调用写入memCache的情况
+        # Functions: 1. Accelerate when you need to see a picture;
+        # Functions: 2. Determine whether a picture is in the memcache
+        # The only call to write to the memCache
         self.TotalRequestNum += 1
         print("get func: ", threading.current_thread().name)
 
         self.GetPicRequestNum += 1
 
         if keyID in self.MC.keys():
-            # 调用的图片就在MemCache
+            # The case that the image to be called is in the MemCache
             self.MC.move_to_end(key=keyID, last=True)
             self.HitNum += 1
             return self.MC[keyID]
         else:
-            # 调用的图片不在MemCache
+            # The called image is not in the MemCache
             self.MissNum += 1
-            print("MemCache无此图片")
+            print("MemCache does not have this image")
             return None
 
     def clear_memcache(self):
         self.MC.clear()
-        # if self.MC == None: 这里需要判断空嘛
 
-        # 所有统计清零
+        # All statistics are cleared
         self.currentMemCache = 0
         self.ItemNum = 0
         self.TotalRequestNum = 0
@@ -158,15 +156,15 @@ class PicMemCache(object):
         cursor.execute(sql_reconfig)
         result = cursor.fetchone()
         if not result:
-            # print('数据库里没配置，拜拜')
+            # print('No configuration in the database')
             return 'Database reconfiguration failed! Because there is no configuration in the database.'
         else:
             newMemCacheCapacity = result[0]
             newDropApproach = result[1]
 
             if newMemCacheCapacity < 0 or newDropApproach not in [0, 1]:
-                # 数据库合规性检查
-                # print('数据库配置不合规范，拜拜')
+                # Database Compliance Check
+                # print('Database configuration is not standardized')
                 return 'Database reconfiguration failed! Because the data in the database is invalid.'
             self.drop_approach = newDropApproach
             print("drop_approach: ", self.drop_approach)
@@ -224,9 +222,9 @@ threading.Thread(target=memory1.write_statistics_2db, daemon=True).start()
 #     memory1.put_pic(i,"picture1")
 #     memory1.get_info()
 # memory1.drop_pic(DROP_APPROACH)
-# memory1.clear_memcache() # 测试正常
-# memory1.Front_end_upload(4)  # 测试正常
-# memory1.refreshConfiguration(0)  # 测试正常
+# memory1.clear_memcache() # Test success
+# memory1.Front_end_upload(4)  # Test success
+# memory1.refreshConfiguration(0)  # Test success
 # print(memory1.get_pic(8))
 # memory1.drop_specific_pic(4)
 # memory1.get_info()
@@ -234,7 +232,7 @@ threading.Thread(target=memory1.write_statistics_2db, daemon=True).start()
 
 @webapp_memcache.route('/put_kv', methods=['POST'])
 def put_kv():
-    # 写入mamcache
+    # Write to mamcache
     key = request.form.get('key')
     value = request.form.get('value')
     # Fig 1.(5) PUT
@@ -251,7 +249,7 @@ def put_kv():
 
 @webapp_memcache.route('/get', methods=['POST'])
 def get():
-    # memcache中有该图片时，返回”Ture+图片cache“；没有时，返回”false+空“
+    #If the image is in memcache, return "Ture+image cache"; if not, return "false+empty"
     key = request.form.get('key')
     # Fig 1.(1) GET
     pic_value = memory1.get_pic(keyID=key)
@@ -269,7 +267,7 @@ def get():
 
 @webapp_memcache.route('/clear', methods=['POST'])
 def clear():
-    # 清除memcache
+    # clear memcache
     memory1.clear_memcache()
     response = jsonify(success='True')
     return response
@@ -277,8 +275,10 @@ def clear():
 
 @webapp_memcache.route('/invalidateKey', methods=['POST'])
 def invalidateKey():
-    # 2个地方使用本函数：1.从memcache中，根据key删除特定图片；2.upload图片时，用于去掉重复keyID图片的memcache
-    # Yizhou你上传图片时，调用就行，不用管是不是重复keyID啥的都不用管
+    # 2 places to use this function:
+    # 1. from the memcache, according to the key to delete specific images;
+    # 2. upload images when used to remove duplicate keyID images of the memcache
+    # Yizhou: When you upload an image, just call it, do not care if it is a duplicate keyID
 
     # Fig 2.(2) invalidateKey
     key = request.form.get('key')
@@ -292,10 +292,10 @@ def invalidateKey():
 def refreshConfiguration():
     res = memory1.refreshConfiguration()
     if 'successful' in res:
-        # 成功从数据库读取新参数，并更改了参数配置
+        # Successfully read the new parameters from the database and changed the parameter configuration
         response = jsonify(success='True')
     else:
-        # 数据规范有问题（2种情况），没有更改，具体原因见读取message即可。
+        # There is a problem with the data specification (2 cases), read message for the exact reason.
         response = jsonify(success='False',
                            message=res)
     return response
